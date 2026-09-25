@@ -1,0 +1,49 @@
+<Window x:Class="Lingo.SnippingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Lingo Screen Snip"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="#40000000"
+        Topmost="True"
+        ShowInTaskbar="False"
+        Cursor="Cross"
+        KeyDown="Window_KeyDown"
+        MouseDown="Window_MouseDown"
+        MouseMove="Window_MouseMove"
+        MouseUp="Window_MouseUp">
+
+    <Grid x:Name="MainCanvas">
+        <!-- Floating Guide Badge -->
+        <Border HorizontalAlignment="Center" 
+                VerticalAlignment="Top" 
+                Margin="0,30,0,0" 
+                Background="#E61E1E1E" 
+                BorderBrush="#444444" 
+                BorderThickness="1" 
+                CornerRadius="20" 
+                Padding="16,8"
+                IsHitTestVisible="False">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="16" ShadowDepth="4" Opacity="0.6" Color="#000000" />
+            </Border.Effect>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <materialDesign:PackIcon Kind="Crop" Width="18" Height="18" Foreground="#E1E1E1" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                <TextBlock Text="Выделите текст для перевода" Foreground="#E1E1E1" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                <TextBlock Text="  •  Esc — отмена" Foreground="#888888" FontSize="12" VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Canvas for Selection Rectangle -->
+        <Canvas x:Name="SelectionCanvas" Background="Transparent">
+            <!-- Sharp Selection Box Border (No Rounded Corners) -->
+            <Border x:Name="SelectionBorder"
+                    BorderBrush="#38BDF8"
+                    BorderThickness="1.5"
+                    Background="#1838BDF8"
+                    CornerRadius="0"
+                    Visibility="Collapsed" />
+        </Canvas>
+    </Grid>
+</Window>
