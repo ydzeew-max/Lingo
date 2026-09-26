@@ -141,31 +141,52 @@
 
                         <!-- Loading Progress Overlay: Minimalist Galaxy AI Style Processing Animation -->
                         <Border x:Name="LoadingOverlay" 
-                                Background="#35000000" 
+                                Background="#14000000" 
                                 CornerRadius="0,0,11,11"
                                 ClipToBounds="True"
                                 Visibility="Collapsed">
-                            <Grid>
-                                <!-- Soft Pearlescent Shimmer Light Wave Across Viewport -->
-                                <Border Height="180" HorizontalAlignment="Stretch" VerticalAlignment="Top" Opacity="0.18" RenderTransformOrigin="0.5,0.5">
-                                    <Border.Background>
+                            <!-- Central Galaxy AI Style Pure Star Constellation -->
+                            <Grid Width="70" Height="70" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Grid.Effect>
+                                    <DropShadowEffect BlurRadius="10" Color="#000000" Opacity="0.45" ShadowDepth="0" />
+                                </Grid.Effect>
+
+                                <!-- Center Primary 4-Pointed Star -->
+                                <Path Width="28" Height="28" 
+                                      Data="M 20 0 Q 20 20 40 20 Q 20 20 20 40 Q 20 20 0 20 Q 20 20 20 0 Z" 
+                                      Stretch="Fill" 
+                                      RenderTransformOrigin="0.5,0.5">
+                                    <Path.Fill>
                                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                            <GradientStop Color="#00000000" Offset="0.0" />
-                                            <GradientStop Color="#15818CF8" Offset="0.3" />
-                                            <GradientStop Color="#50FFFFFF" Offset="0.5" />
-                                            <GradientStop Color="#15818CF8" Offset="0.7" />
-                                            <GradientStop Color="#00000000" Offset="1.0" />
+                                            <GradientStop Color="#FFFFFFFF" Offset="0.0" />
+                                            <GradientStop Color="#FFC7D2FE" Offset="0.45" />
+                                            <GradientStop Color="#FF818CF8" Offset="1.0" />
                                         </LinearGradientBrush>
-                                    </Border.Background>
-                                    <Border.RenderTransform>
-                                        <TranslateTransform x:Name="ShimmerTransform" Y="-100" />
-                                    </Border.RenderTransform>
-                                    <Border.Triggers>
+                                    </Path.Fill>
+                                    <Path.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform x:Name="MainStarScale" ScaleX="1.0" ScaleY="1.0" />
+                                            <RotateTransform x:Name="MainStarRotate" Angle="0" />
+                                        </TransformGroup>
+                                    </Path.RenderTransform>
+                                    <Path.Triggers>
                                         <EventTrigger RoutedEvent="Loaded">
                                             <BeginStoryboard>
-                                                <Storyboard RepeatBehavior="Forever">
-                                                    <DoubleAnimation Storyboard.TargetName="ShimmerTransform" Storyboard.TargetProperty="Y"
-                                                                     From="-120" To="600" Duration="0:0:2.4">
+                                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                    <DoubleAnimation Storyboard.TargetName="MainStarScale" Storyboard.TargetProperty="ScaleX"
+                                                                     From="0.85" To="1.18" Duration="0:0:1.1">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <SineEase EasingMode="EaseInOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                    <DoubleAnimation Storyboard.TargetName="MainStarScale" Storyboard.TargetProperty="ScaleY"
+                                                                     From="0.85" To="1.18" Duration="0:0:1.1">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <SineEase EasingMode="EaseInOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                    <DoubleAnimation Storyboard.TargetName="MainStarRotate" Storyboard.TargetProperty="Angle"
+                                                                     From="-10" To="10" Duration="0:0:1.5">
                                                         <DoubleAnimation.EasingFunction>
                                                             <SineEase EasingMode="EaseInOut" />
                                                         </DoubleAnimation.EasingFunction>
@@ -173,187 +194,89 @@
                                                 </Storyboard>
                                             </BeginStoryboard>
                                         </EventTrigger>
-                                    </Border.Triggers>
-                                </Border>
+                                    </Path.Triggers>
+                                </Path>
 
-                                <!-- Central Galaxy AI Style Star Constellation Badge -->
-                                <Grid Width="90" Height="90" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    
-                                    <!-- Gentle Expanding Aura Ring -->
-                                    <Ellipse x:Name="AiAuraRing" Width="52" Height="52" 
-                                             Stroke="#40818CF8" StrokeThickness="1.5" 
-                                             Opacity="0.6" 
-                                             RenderTransformOrigin="0.5,0.5">
-                                        <Ellipse.RenderTransform>
-                                            <ScaleTransform x:Name="AuraScale" ScaleX="1.0" ScaleY="1.0" />
-                                        </Ellipse.RenderTransform>
-                                        <Ellipse.Triggers>
-                                            <EventTrigger RoutedEvent="Loaded">
-                                                <BeginStoryboard>
-                                                    <Storyboard RepeatBehavior="Forever">
-                                                        <DoubleAnimation Storyboard.TargetName="AuraScale" Storyboard.TargetProperty="ScaleX"
-                                                                         From="0.85" To="1.45" Duration="0:0:1.6">
-                                                            <DoubleAnimation.EasingFunction>
-                                                                <SineEase EasingMode="EaseOut" />
-                                                            </DoubleAnimation.EasingFunction>
-                                                        </DoubleAnimation>
-                                                        <DoubleAnimation Storyboard.TargetName="AuraScale" Storyboard.TargetProperty="ScaleY"
-                                                                         From="0.85" To="1.45" Duration="0:0:1.6">
-                                                            <DoubleAnimation.EasingFunction>
-                                                                <SineEase EasingMode="EaseOut" />
-                                                            </DoubleAnimation.EasingFunction>
-                                                        </DoubleAnimation>
-                                                        <DoubleAnimation Storyboard.TargetName="AiAuraRing" Storyboard.TargetProperty="Opacity"
-                                                                         From="0.55" To="0.0" Duration="0:0:1.6">
-                                                            <DoubleAnimation.EasingFunction>
-                                                                <SineEase EasingMode="EaseOut" />
-                                                            </DoubleAnimation.EasingFunction>
-                                                        </DoubleAnimation>
-                                                    </Storyboard>
-                                                </BeginStoryboard>
-                                            </EventTrigger>
-                                        </Ellipse.Triggers>
-                                    </Ellipse>
+                                <!-- Orbiting Companion Star (Top Right) -->
+                                <Path Width="13" Height="13" 
+                                      Data="M 20 0 Q 20 20 40 20 Q 20 20 20 40 Q 20 20 0 20 Q 20 20 20 0 Z" 
+                                      Stretch="Fill" 
+                                      Margin="22,-16,0,0"
+                                      RenderTransformOrigin="0.5,0.5">
+                                    <Path.Fill>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                            <GradientStop Color="#FFFFFFFF" Offset="0.0" />
+                                            <GradientStop Color="#FFA5B4FC" Offset="1.0" />
+                                        </LinearGradientBrush>
+                                    </Path.Fill>
+                                    <Path.RenderTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform x:Name="SubStarScale" ScaleX="0.9" ScaleY="0.9" />
+                                            <RotateTransform x:Name="SubStarRotate" Angle="15" />
+                                        </TransformGroup>
+                                    </Path.RenderTransform>
+                                    <Path.Triggers>
+                                        <EventTrigger RoutedEvent="Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                    <DoubleAnimation Storyboard.TargetName="SubStarScale" Storyboard.TargetProperty="ScaleX"
+                                                                     From="0.75" To="1.25" Duration="0:0:0.9">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <SineEase EasingMode="EaseInOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                    <DoubleAnimation Storyboard.TargetName="SubStarScale" Storyboard.TargetProperty="ScaleY"
+                                                                     From="0.75" To="1.25" Duration="0:0:0.9">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <SineEase EasingMode="EaseInOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                    <DoubleAnimation Storyboard.TargetName="SubStarRotate" Storyboard.TargetProperty="Angle"
+                                                                     From="0" To="45" Duration="0:0:1.3">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <SineEase EasingMode="EaseInOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Path.Triggers>
+                                </Path>
 
-                                    <!-- Frosted Dark Obsidian Capsule Badge -->
-                                    <Border Width="56" Height="56" Background="#E615161E" CornerRadius="28" 
-                                            BorderBrush="#2A818CF8" BorderThickness="1.2">
-                                        <Border.Effect>
-                                            <DropShadowEffect BlurRadius="22" Color="#4F46E5" Opacity="0.32" ShadowDepth="0" />
-                                        </Border.Effect>
+                                <!-- Micro Accent Sparkle (Bottom Left) -->
+                                <Path Width="8" Height="8" 
+                                      Data="M 20 0 Q 20 20 40 20 Q 20 20 20 40 Q 20 20 0 20 Q 20 20 20 0 Z" 
+                                      Stretch="Fill" 
+                                      Margin="-18,16,0,0"
+                                      RenderTransformOrigin="0.5,0.5">
+                                    <Path.Fill>
+                                        <SolidColorBrush Color="#E0E7FF" />
+                                    </Path.Fill>
+                                    <Path.RenderTransform>
+                                        <ScaleTransform x:Name="MicroStarScale" ScaleX="0.9" ScaleY="0.9" />
+                                    </Path.RenderTransform>
+                                    <Path.Triggers>
+                                        <EventTrigger RoutedEvent="Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                    <DoubleAnimation Storyboard.TargetName="MicroStarScale" Storyboard.TargetProperty="ScaleX"
+                                                                     From="0.5" To="1.3" Duration="0:0:0.75">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <SineEase EasingMode="EaseInOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                    <DoubleAnimation Storyboard.TargetName="MicroStarScale" Storyboard.TargetProperty="ScaleY"
+                                                                     From="0.5" To="1.3" Duration="0:0:0.75">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <SineEase EasingMode="EaseInOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Path.Triggers>
+                                </Path>
 
-                                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-                                            
-                                            <!-- Center Primary 4-Pointed Star -->
-                                            <Path Width="24" Height="24" 
-                                                  Data="M 20 0 Q 20 20 40 20 Q 20 20 20 40 Q 20 20 0 20 Q 20 20 20 0 Z" 
-                                                  Stretch="Fill" 
-                                                  RenderTransformOrigin="0.5,0.5">
-                                                <Path.Fill>
-                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                        <GradientStop Color="#FFFFFFFF" Offset="0.0" />
-                                                        <GradientStop Color="#FFC7D2FE" Offset="0.45" />
-                                                        <GradientStop Color="#FF818CF8" Offset="1.0" />
-                                                    </LinearGradientBrush>
-                                                </Path.Fill>
-                                                <Path.RenderTransform>
-                                                    <TransformGroup>
-                                                        <ScaleTransform x:Name="MainStarScale" ScaleX="1.0" ScaleY="1.0" />
-                                                        <RotateTransform x:Name="MainStarRotate" Angle="0" />
-                                                    </TransformGroup>
-                                                </Path.RenderTransform>
-                                                <Path.Triggers>
-                                                    <EventTrigger RoutedEvent="Loaded">
-                                                        <BeginStoryboard>
-                                                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
-                                                                <DoubleAnimation Storyboard.TargetName="MainStarScale" Storyboard.TargetProperty="ScaleX"
-                                                                                 From="0.88" To="1.14" Duration="0:0:1.1">
-                                                                    <DoubleAnimation.EasingFunction>
-                                                                        <SineEase EasingMode="EaseInOut" />
-                                                                    </DoubleAnimation.EasingFunction>
-                                                                </DoubleAnimation>
-                                                                <DoubleAnimation Storyboard.TargetName="MainStarScale" Storyboard.TargetProperty="ScaleY"
-                                                                                 From="0.88" To="1.14" Duration="0:0:1.1">
-                                                                    <DoubleAnimation.EasingFunction>
-                                                                        <SineEase EasingMode="EaseInOut" />
-                                                                    </DoubleAnimation.EasingFunction>
-                                                                </DoubleAnimation>
-                                                                <DoubleAnimation Storyboard.TargetName="MainStarRotate" Storyboard.TargetProperty="Angle"
-                                                                                 From="-12" To="12" Duration="0:0:1.5">
-                                                                    <DoubleAnimation.EasingFunction>
-                                                                        <SineEase EasingMode="EaseInOut" />
-                                                                    </DoubleAnimation.EasingFunction>
-                                                                </DoubleAnimation>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </EventTrigger>
-                                                </Path.Triggers>
-                                            </Path>
-
-                                            <!-- Orbiting Companion Star (Top Right) -->
-                                            <Path Width="11" Height="11" 
-                                                  Data="M 20 0 Q 20 20 40 20 Q 20 20 20 40 Q 20 20 0 20 Q 20 20 20 0 Z" 
-                                                  Stretch="Fill" 
-                                                  Margin="17,-13,0,0"
-                                                  RenderTransformOrigin="0.5,0.5">
-                                                <Path.Fill>
-                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                        <GradientStop Color="#FFFFFFFF" Offset="0.0" />
-                                                        <GradientStop Color="#FFA5B4FC" Offset="1.0" />
-                                                    </LinearGradientBrush>
-                                                </Path.Fill>
-                                                <Path.RenderTransform>
-                                                    <TransformGroup>
-                                                        <ScaleTransform x:Name="SubStarScale" ScaleX="0.9" ScaleY="0.9" />
-                                                        <RotateTransform x:Name="SubStarRotate" Angle="15" />
-                                                    </TransformGroup>
-                                                </Path.RenderTransform>
-                                                <Path.Triggers>
-                                                    <EventTrigger RoutedEvent="Loaded">
-                                                        <BeginStoryboard>
-                                                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
-                                                                <DoubleAnimation Storyboard.TargetName="SubStarScale" Storyboard.TargetProperty="ScaleX"
-                                                                                 From="0.75" To="1.25" Duration="0:0:0.9">
-                                                                    <DoubleAnimation.EasingFunction>
-                                                                        <SineEase EasingMode="EaseInOut" />
-                                                                    </DoubleAnimation.EasingFunction>
-                                                                </DoubleAnimation>
-                                                                <DoubleAnimation Storyboard.TargetName="SubStarScale" Storyboard.TargetProperty="ScaleY"
-                                                                                 From="0.75" To="1.25" Duration="0:0:0.9">
-                                                                    <DoubleAnimation.EasingFunction>
-                                                                        <SineEase EasingMode="EaseInOut" />
-                                                                    </DoubleAnimation.EasingFunction>
-                                                                </DoubleAnimation>
-                                                                <DoubleAnimation Storyboard.TargetName="SubStarRotate" Storyboard.TargetProperty="Angle"
-                                                                                 From="0" To="45" Duration="0:0:1.3">
-                                                                    <DoubleAnimation.EasingFunction>
-                                                                        <SineEase EasingMode="EaseInOut" />
-                                                                    </DoubleAnimation.EasingFunction>
-                                                                </DoubleAnimation>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </EventTrigger>
-                                                </Path.Triggers>
-                                            </Path>
-
-                                            <!-- Micro Accent Sparkle (Bottom Left) -->
-                                            <Path Width="7" Height="7" 
-                                                  Data="M 20 0 Q 20 20 40 20 Q 20 20 20 40 Q 20 20 0 20 Q 20 20 20 0 Z" 
-                                                  Stretch="Fill" 
-                                                  Margin="-15,13,0,0"
-                                                  RenderTransformOrigin="0.5,0.5">
-                                                <Path.Fill>
-                                                    <SolidColorBrush Color="#E0E7FF" />
-                                                </Path.Fill>
-                                                <Path.RenderTransform>
-                                                    <ScaleTransform x:Name="MicroStarScale" ScaleX="0.9" ScaleY="0.9" />
-                                                </Path.RenderTransform>
-                                                <Path.Triggers>
-                                                    <EventTrigger RoutedEvent="Loaded">
-                                                        <BeginStoryboard>
-                                                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
-                                                                <DoubleAnimation Storyboard.TargetName="MicroStarScale" Storyboard.TargetProperty="ScaleX"
-                                                                                 From="0.5" To="1.3" Duration="0:0:0.75">
-                                                                    <DoubleAnimation.EasingFunction>
-                                                                        <SineEase EasingMode="EaseInOut" />
-                                                                    </DoubleAnimation.EasingFunction>
-                                                                </DoubleAnimation>
-                                                                <DoubleAnimation Storyboard.TargetName="MicroStarScale" Storyboard.TargetProperty="ScaleY"
-                                                                                 From="0.5" To="1.3" Duration="0:0:0.75">
-                                                                    <DoubleAnimation.EasingFunction>
-                                                                        <SineEase EasingMode="EaseInOut" />
-                                                                    </DoubleAnimation.EasingFunction>
-                                                                </DoubleAnimation>
-                                                            </Storyboard>
-                                                        </BeginStoryboard>
-                                                    </EventTrigger>
-                                                </Path.Triggers>
-                                            </Path>
-
-                                        </Grid>
-                                    </Border>
-
-                                </Grid>
                             </Grid>
                         </Border>
 
