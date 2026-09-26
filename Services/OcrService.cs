@@ -106,16 +106,22 @@ namespace Lingo.Services
 
             try
             {
-                // Standardize and normalize resolution for optimal OCR text recognition
+                // Standardize and normalize resolution for optimal OCR text recognition across all resolutions
                 double scale = 1.0;
                 Bitmap processBitmap;
 
                 double maxDim = Math.Max(sourceBitmap.Width, sourceBitmap.Height);
                 double minDim = Math.Min(sourceBitmap.Width, sourceBitmap.Height);
 
-                if (minDim < 500 || maxDim < 1400)
+                if (minDim < 600 || maxDim < 1600)
                 {
-                    scale = Math.Min(3.0, Math.Max(1.5, 1600.0 / maxDim));
+                    // For small or low-DPI images, upscale smoothly to reveal small font details
+                    scale = Math.Min(3.0, Math.Max(1.6, 1800.0 / maxDim));
+                }
+                else if (maxDim > 2500)
+                {
+                    // For massive 4K/high-res captures, downscale slightly so Windows OCR stays in its sweet spot
+                    scale = 2400.0 / maxDim;
                 }
 
                 int targetW = (int)Math.Round(sourceBitmap.Width * scale);
@@ -129,9 +135,9 @@ namespace Lingo.Services
                     g.PixelOffsetMode = PixelOffsetMode.HighQuality;
                     g.CompositingQuality = CompositingQuality.HighQuality;
 
-                    // Clean contrast boost (+24%)
+                    // Clean contrast & clarity boost (+26%)
                     using var attr = new ImageAttributes();
-                    float c = 1.24f;
+                    float c = 1.26f;
                     float t = (1.0f - c) / 2.0f;
                     attr.SetColorMatrix(new ColorMatrix(new float[][]
                     {
@@ -586,47 +592,72 @@ namespace Lingo.Services
                 w = Math.Max(1, Math.Min(bmp.Width - x, w));
                 h = Math.Max(1, Math.Min(bmp.Height - y, h));
 
-                long totalR = 0, totalG = 0, totalB = 0;
-                int count = 0;
+                var sampledColors = new List<Color>();
 
                 // Sample just outside top and bottom edges (pure background)
                 int sampleTopY = Math.Max(0, y - 1);
                 int sampleBottomY = Math.Min(bmp.Height - 1, y + h);
 
-                int stepX = Math.Max(1, w / 12);
+                int stepX = Math.Max(1, w / 24);
                 for (int px = x; px < x + w; px += stepX)
                 {
-                    var c1 = bmp.GetPixel(px, sampleTopY);
-                    var c2 = bmp.GetPixel(px, sampleBottomY);
-                    totalR += c1.R + c2.R;
-                    totalG += c1.G + c2.G;
-                    totalB += c1.B + c2.B;
-                    count += 2;
+                    if (px < bmp.Width)
+                    {
+                        sampledColors.Add(bmp.GetPixel(px, sampleTopY));
+                        sampledColors.Add(bmp.GetPixel(px, sampleBottomY));
+                    }
                 }
 
                 // Sample just outside left and right edges
                 int sampleLeftX = Math.Max(0, x - 1);
                 int sampleRightX = Math.Min(bmp.Width - 1, x + w);
-                int stepY = Math.Max(1, h / 6);
+                int stepY = Math.Max(1, h / 8);
                 for (int py = y; py < y + h; py += stepY)
                 {
-                    var c1 = bmp.GetPixel(sampleLeftX, py);
-                    var c2 = bmp.GetPixel(sampleRightX, py);
-                    totalR += c1.R + c2.R;
-                    totalG += c1.G + c2.G;
-                    totalB += c1.B + c2.B;
-                    count += 2;
+                    if (py < bmp.Height)
+                    {
+                        sampledColors.Add(bmp.GetPixel(sampleLeftX, py));
+                        sampledColors.Add(bmp.GetPixel(sampleRightX, py));
+                    }
                 }
 
-                if (count > 0)
+                if (sampledColors.Count > 0)
                 {
-                    byte avgR = (byte)(totalR / count);
-                    byte avgG = (byte)(totalG / count);
-                    byte avgB = (byte)(totalB / count);
+                    // Dominant Color Clustering / Mode Histogram (Bucket by 16 units)
+                    // Eliminates muddy gray blending by filtering out outlier border/icon pixels
+                    var buckets = new Dictionary<int, List<Color>>();
+                    foreach (var col in sampledColors)
+                    {
+                        int rKey = (col.R / 16) * 16;
+                        int gKey = (col.G / 16) * 16;
+                        int bKey = (col.B / 16) * 16;
+                        int key = (rKey << 16) | (gKey << 8) | bKey;
+
+                        if (!buckets.TryGetValue(key, out var list))
+                        {
+                            list = new List<Color>();
+                            buckets[key] = list;
+                        }
+                        list.Add(col);
+                    }
+
+                    // Select the most dominant background cluster
+                    var dominantCluster = buckets.OrderByDescending(b => b.Value.Count).First().Value;
+
+                    long sumR = 0, sumG = 0, sumB = 0;
+                    foreach (var col in dominantCluster)
+                    {
+                        sumR += col.R;
+                        sumG += col.G;
+                        sumB += col.B;
+                    }
+
+                    byte avgR = (byte)(sumR / dominantCluster.Count);
+                    byte avgG = (byte)(sumG / dominantCluster.Count);
+                    byte avgB = (byte)(sumB / dominantCluster.Count);
 
                     double luminance = (0.299 * avgR + 0.587 * avgG + 0.114 * avgB) / 255.0;
                     WpfColor textColor = luminance > 0.52 ? WpfColor.FromRgb(15, 15, 15) : WpfColor.FromRgb(250, 250, 250);
-                    // 100% opaque solid background color
                     WpfColor bgColor = WpfColor.FromRgb(avgR, avgG, avgB);
 
                     return (bgColor, textColor);

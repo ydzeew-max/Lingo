@@ -104,9 +104,9 @@
                     <Grid x:Name="ViewportGrid" 
                           Background="Transparent"
                           MouseWheel="ViewportGrid_MouseWheel"
-                          MouseDown="ViewportGrid_MouseDown"
-                          MouseMove="ViewportGrid_MouseMove"
-                          MouseUp="ViewportGrid_MouseUp">
+                          PreviewMouseDown="ViewportGrid_PreviewMouseDown"
+                          PreviewMouseMove="ViewportGrid_PreviewMouseMove"
+                          PreviewMouseUp="ViewportGrid_PreviewMouseUp">
 
                         <!-- Main Image Container with Interactive Zoom & Pan Transforms -->
                         <Grid x:Name="ImageContainerGrid" 
@@ -131,62 +131,90 @@
                                     VerticalAlignment="Top" />
                         </Grid>
 
-                        <!-- Loading Progress Overlay with Aesthetic Pulsing Radar Scanning Effect -->
+                        <!-- Loading Progress Overlay with Aesthetic Laser Beam Scanning Effect (No Text) -->
                         <Border x:Name="LoadingOverlay" 
-                                Background="#88000000" 
+                                Background="#45000000" 
                                 CornerRadius="0,0,11,11"
+                                ClipToBounds="True"
                                 Visibility="Collapsed">
-                            <Border HorizontalAlignment="Center" VerticalAlignment="Center"
-                                    Background="#F2202020" BorderBrush="{StaticResource WindowBorder}" BorderThickness="1"
-                                    CornerRadius="18" Padding="28,22">
-                                <Border.Effect>
-                                    <DropShadowEffect BlurRadius="24" ShadowDepth="3" Opacity="0.6" Color="#000000" />
-                                </Border.Effect>
-                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    <!-- Sleek Pulse & Radar Scanner -->
-                                    <Grid Width="56" Height="56" Margin="0,0,0,14" HorizontalAlignment="Center">
-                                        <!-- Glowing Outer Pulse Ring -->
-                                        <Ellipse x:Name="PulseRing" Width="40" Height="40" 
-                                                 Stroke="#38BDF8" StrokeThickness="2" 
-                                                 Opacity="0.4" 
-                                                 RenderTransformOrigin="0.5,0.5">
-                                            <Ellipse.RenderTransform>
-                                                <ScaleTransform x:Name="PulseScale" ScaleX="1.0" ScaleY="1.0" />
-                                            </Ellipse.RenderTransform>
-                                            <Ellipse.Triggers>
-                                                <EventTrigger RoutedEvent="Loaded">
-                                                    <BeginStoryboard>
-                                                        <Storyboard RepeatBehavior="Forever">
-                                                            <DoubleAnimation Storyboard.TargetName="PulseScale" Storyboard.TargetProperty="ScaleX"
-                                                                             From="0.85" To="1.45" Duration="0:0:1.3">
-                                                                <DoubleAnimation.EasingFunction>
-                                                                    <CubicEase EasingMode="EaseOut" />
-                                                                </DoubleAnimation.EasingFunction>
-                                                            </DoubleAnimation>
-                                                            <DoubleAnimation Storyboard.TargetName="PulseScale" Storyboard.TargetProperty="ScaleY"
-                                                                             From="0.85" To="1.45" Duration="0:0:1.3">
-                                                                <DoubleAnimation.EasingFunction>
-                                                                    <CubicEase EasingMode="EaseOut" />
-                                                                </DoubleAnimation.EasingFunction>
-                                                            </DoubleAnimation>
-                                                            <DoubleAnimation Storyboard.TargetName="PulseRing" Storyboard.TargetProperty="Opacity"
-                                                                             From="0.8" To="0.0" Duration="0:0:1.3" />
-                                                        </Storyboard>
-                                                    </BeginStoryboard>
-                                                </EventTrigger>
-                                            </Ellipse.Triggers>
-                                        </Ellipse>
+                            <Grid>
+                                <!-- Center Aesthetic Pulsing Radar Core (Zero Text) -->
+                                <Grid Width="70" Height="70" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <!-- Outer Pulsing Ring -->
+                                    <Ellipse x:Name="PulseRing" Width="46" Height="46" 
+                                             Stroke="{StaticResource AccentBrush}" StrokeThickness="2" 
+                                             Opacity="0.7" 
+                                             RenderTransformOrigin="0.5,0.5">
+                                        <Ellipse.RenderTransform>
+                                            <ScaleTransform x:Name="PulseScale" ScaleX="1.0" ScaleY="1.0" />
+                                        </Ellipse.RenderTransform>
+                                        <Ellipse.Triggers>
+                                            <EventTrigger RoutedEvent="Loaded">
+                                                <BeginStoryboard>
+                                                    <Storyboard RepeatBehavior="Forever">
+                                                        <DoubleAnimation Storyboard.TargetName="PulseScale" Storyboard.TargetProperty="ScaleX"
+                                                                         From="0.8" To="1.55" Duration="0:0:1.25">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut" />
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                        <DoubleAnimation Storyboard.TargetName="PulseScale" Storyboard.TargetProperty="ScaleY"
+                                                                         From="0.8" To="1.55" Duration="0:0:1.25">
+                                                            <DoubleAnimation.EasingFunction>
+                                                                <CubicEase EasingMode="EaseOut" />
+                                                            </DoubleAnimation.EasingFunction>
+                                                        </DoubleAnimation>
+                                                        <DoubleAnimation Storyboard.TargetName="PulseRing" Storyboard.TargetProperty="Opacity"
+                                                                         From="0.8" To="0.0" Duration="0:0:1.25" />
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                        </Ellipse.Triggers>
+                                    </Ellipse>
 
-                                        <!-- Center Scanning Icon Badge -->
-                                        <Border Width="38" Height="38" Background="#1E3A5F" CornerRadius="19" BorderBrush="#38BDF8" BorderThickness="1.5">
-                                            <materialDesign:PackIcon Kind="AutoFix" Width="20" Height="20" Foreground="#38BDF8" 
-                                                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                    </Grid>
+                                    <!-- Center Core Badge with Glow -->
+                                    <Border Width="40" Height="40" Background="#E61A2B3D" CornerRadius="20" BorderBrush="{StaticResource AccentBrush}" BorderThickness="1.5">
+                                        <Border.Effect>
+                                            <DropShadowEffect BlurRadius="18" Color="#60CDFF" Opacity="0.55" ShadowDepth="0" />
+                                        </Border.Effect>
+                                        <materialDesign:PackIcon Kind="AutoFix" Width="20" Height="20" Foreground="{StaticResource AccentBrush}" 
+                                                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </Grid>
 
-                                    <TextBlock x:Name="LoadingText" Text="Распознавание текста..." Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" FontSize="13" HorizontalAlignment="Center"/>
-                                </StackPanel>
-                            </Border>
+                                <!-- Sweeping Laser Scan Line -->
+                                <Border Height="3" VerticalAlignment="Top" HorizontalAlignment="Stretch" RenderTransformOrigin="0.5,0.5">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                            <GradientStop Color="#0060CDFF" Offset="0.0" />
+                                            <GradientStop Color="#CC60CDFF" Offset="0.25" />
+                                            <GradientStop Color="#FFFFFFFF" Offset="0.5" />
+                                            <GradientStop Color="#CC60CDFF" Offset="0.75" />
+                                            <GradientStop Color="#0060CDFF" Offset="1.0" />
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                    <Border.Effect>
+                                        <DropShadowEffect BlurRadius="12" Color="#60CDFF" Opacity="0.85" ShadowDepth="0" />
+                                    </Border.Effect>
+                                    <Border.RenderTransform>
+                                        <TranslateTransform x:Name="LaserTransform" Y="0" />
+                                    </Border.RenderTransform>
+                                    <Border.Triggers>
+                                        <EventTrigger RoutedEvent="Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                                    <DoubleAnimation Storyboard.TargetName="LaserTransform" Storyboard.TargetProperty="Y"
+                                                                     From="15" To="520" Duration="0:0:1.6">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <SineEase EasingMode="EaseInOut" />
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
+                                    </Border.Triggers>
+                                </Border>
+                            </Grid>
                         </Border>
 
                         <!-- ================= FLOATING GLASSMORPHIC BOTTOM CONTROL BAR ================= -->

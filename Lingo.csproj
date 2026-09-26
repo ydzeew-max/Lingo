@@ -31,4 +31,10 @@
     <EmbeddedResource Include="Dictionaries\**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="source code\**" />
+    <Page Remove="source code\**" />
+    <None Remove="source code\**" />
+  </ItemGroup>
+
 </Project>

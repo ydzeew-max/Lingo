@@ -221,7 +221,6 @@ namespace Lingo
             var token = _cts.Token;
 
             LoadingOverlay.Visibility = Visibility.Visible;
-            LoadingText.Text = "Распознавание и перевод текста...";
 
             string selectedSource = SourceLangCombo.SelectedItem as string ?? "Автоопределение";
             string targetLang = TargetLangCombo.SelectedItem as string ?? "Русский";
@@ -229,7 +228,7 @@ namespace Lingo
 
             try
             {
-                // Step 1: Visual OCR with Multi-Engine Auto-Detection, Paragraph Clustering & Collision Resolution
+                // Step 1: Visual OCR with Multi-Engine Auto-Detection & High-Precision Line Segmentation
                 var visualResult = await Task.Run(async () =>
                 {
                     return await _ocrService.RecognizeVisualBlocksAsync(_currentBitmap, selectedSource);
@@ -268,35 +267,106 @@ namespace Lingo
 
                 if (visualResult.Blocks.Count == 0)
                 {
-                    LoadingText.Text = "Текст на изображении не обнаружен";
-                    await Task.Delay(1200, token);
+                    await Task.Delay(600, token);
                     LoadingOverlay.Visibility = Visibility.Collapsed;
                     return;
                 }
 
-                // Step 2: Translate all detected text blocks in parallel
+                // Step 2: Context-Aware Paragraph Grouping & Translation
                 bool isSameLang = CleanName(actualSourceLang).Equals(CleanName(targetLang), StringComparison.OrdinalIgnoreCase);
 
-                var translationTasks = visualResult.Blocks.Select(async block =>
+                if (isSameLang)
                 {
-                    if (isSameLang)
+                    foreach (var b in visualResult.Blocks)
+                        b.TranslatedText = b.OriginalText;
+                }
+                else
+                {
+                    // Group nearby lines into coherent sentence/paragraph clusters for grammatically natural translation
+                    var clusters = new List<List<OcrTextBlock>>();
+                    var currentCluster = new List<OcrTextBlock>();
+
+                    for (int i = 0; i < visualResult.Blocks.Count; i++)
                     {
-                        block.TranslatedText = block.OriginalText;
-                        return;
+                        var block = visualResult.Blocks[i];
+                        if (currentCluster.Count == 0)
+                        {
+                            currentCluster.Add(block);
+                        }
+                        else
+                        {
+                            var prev = currentCluster.Last();
+                            double vertGap = block.Y - (prev.Y + prev.Height);
+                            if (vertGap >= -4.0 && vertGap < Math.Max(prev.Height, block.Height) * 1.5 && Math.Abs(block.X - prev.X) < 180.0)
+                            {
+                                currentCluster.Add(block);
+                            }
+                            else
+                            {
+                                clusters.Add(currentCluster);
+                                currentCluster = new List<OcrTextBlock> { block };
+                            }
+                        }
+                    }
+                    if (currentCluster.Count > 0)
+                    {
+                        clusters.Add(currentCluster);
                     }
 
-                    try
+                    // Translate clusters in parallel with full paragraph context
+                    var clusterTasks = clusters.Select(async cluster =>
                     {
-                        var res = await App.Translator.TranslateDetailedAsync(block.OriginalText, actualSourceLang, targetLang, engine, token);
-                        block.TranslatedText = string.IsNullOrWhiteSpace(res.Text) ? block.OriginalText : res.Text;
-                    }
-                    catch
-                    {
-                        block.TranslatedText = block.OriginalText;
-                    }
-                }).ToArray();
+                        if (cluster.Count == 1)
+                        {
+                            try
+                            {
+                                var res = await App.Translator.TranslateDetailedAsync(cluster[0].OriginalText, actualSourceLang, targetLang, engine, token);
+                                cluster[0].TranslatedText = string.IsNullOrWhiteSpace(res.Text) ? cluster[0].OriginalText : res.Text;
+                            }
+                            catch
+                            {
+                                cluster[0].TranslatedText = cluster[0].OriginalText;
+                            }
+                            return;
+                        }
 
-                await Task.WhenAll(translationTasks);
+                        // Multi-line contextual translation: preserves sentence structure across lines
+                        string combinedText = string.Join("\n", cluster.Select(b => b.OriginalText));
+                        try
+                        {
+                            var res = await App.Translator.TranslateDetailedAsync(combinedText, actualSourceLang, targetLang, engine, token);
+                            if (!string.IsNullOrWhiteSpace(res.Text))
+                            {
+                                var translatedLines = res.Text.Split('\n');
+                                if (translatedLines.Length == cluster.Count)
+                                {
+                                    for (int k = 0; k < cluster.Count; k++)
+                                    {
+                                        cluster[k].TranslatedText = translatedLines[k].Trim();
+                                    }
+                                    return;
+                                }
+                            }
+                        }
+                        catch { }
+
+                        // Fallback to line-by-line if line count mismatch
+                        foreach (var b in cluster)
+                        {
+                            try
+                            {
+                                var res = await App.Translator.TranslateDetailedAsync(b.OriginalText, actualSourceLang, targetLang, engine, token);
+                                b.TranslatedText = string.IsNullOrWhiteSpace(res.Text) ? b.OriginalText : res.Text;
+                            }
+                            catch
+                            {
+                                b.TranslatedText = b.OriginalText;
+                            }
+                        }
+                    }).ToArray();
+
+                    await Task.WhenAll(clusterTasks);
+                }
 
                 if (token.IsCancellationRequested) return;
 
@@ -318,31 +388,40 @@ namespace Lingo
         {
             OverlayCanvas.Children.Clear();
 
+            double imgW = _currentBitmap != null ? _currentBitmap.Width : 1920.0;
+            double imgH = _currentBitmap != null ? _currentBitmap.Height : 1080.0;
+
             int blockIndex = 0;
             foreach (var block in blocks)
             {
                 if (string.IsNullOrWhiteSpace(block.TranslatedText))
                     continue;
 
-                double origX = block.X;
-                double origY = block.Y;
-                double blockW = Math.Max(10, block.Width);
-                double blockH = Math.Max(10, block.Height);
+                // Strict coordinate clamping within image bounds (prevent flying off screen)
+                double origX = Math.Max(0.0, Math.Min(imgW - 10.0, block.X));
+                double origY = Math.Max(0.0, Math.Min(imgH - 10.0, block.Y));
 
-                // Allow width to expand gracefully if translated text is longer, without overflowing image bounds
-                if (_currentBitmap != null && block.TranslatedText.Length > block.OriginalText.Length)
+                double maxAvailableW = Math.Max(10.0, imgW - origX);
+                double maxAvailableH = Math.Max(10.0, imgH - origY);
+
+                double blockW = Math.Max(10.0, Math.Min(maxAvailableW, block.Width));
+                double blockH = Math.Max(10.0, Math.Min(maxAvailableH, block.Height));
+
+                // If translated text is longer, allow subtle expansion but strictly clamp to available width
+                if (block.TranslatedText.Length > block.OriginalText.Length)
                 {
                     double ratio = (double)block.TranslatedText.Length / Math.Max(1, block.OriginalText.Length);
-                    double desiredW = blockW * Math.Min(1.30, ratio);
-                    double maxW = Math.Max(blockW, _currentBitmap.Width - origX - 4);
-                    blockW = Math.Min(maxW, desiredW);
+                    double desiredW = blockW * Math.Min(1.22, ratio);
+                    blockW = Math.Min(maxAvailableW, desiredW);
                 }
 
                 var blockBorder = new Border
                 {
                     Width = blockW,
                     Height = blockH,
-                    Background = new SolidColorBrush(block.BackgroundColor), // 100% opaque solid background matching substrate
+                    MaxWidth = maxAvailableW,
+                    MaxHeight = maxAvailableH,
+                    Background = new SolidColorBrush(block.BackgroundColor), // 100% opaque dominant cluster background
                     CornerRadius = new CornerRadius(0),
                     BorderThickness = new Thickness(0),
                     Cursor = WpfCursors.Hand,
@@ -370,22 +449,32 @@ namespace Lingo
                     _tts.ToggleSpeak(copyText, targetLang, $"block_{origY}");
                 };
 
-                // Viewbox with Left alignment strictly preserves line indents, bullet points, and margins!
+                // Viewbox with Left alignment strictly preserves line indents and scaling
                 var viewbox = new Viewbox
                 {
                     Stretch = Stretch.Uniform,
                     StretchDirection = StretchDirection.DownOnly,
                     HorizontalAlignment = WpfHorizontalAlignment.Left,
                     VerticalAlignment = WpfVerticalAlignment.Center,
+                    MaxWidth = blockW,
+                    MaxHeight = blockH,
                     Margin = new Thickness(1, 0, 1, 0)
                 };
+
+                // Dynamic font calculation
+                double targetFontSize = Math.Max(9.5, Math.Min(24.0, blockH * 0.76));
+                if (block.TranslatedText.Length > block.OriginalText.Length)
+                {
+                    double exp = (double)block.TranslatedText.Length / Math.Max(1, block.OriginalText.Length);
+                    targetFontSize = Math.Max(9.0, targetFontSize / Math.Sqrt(exp));
+                }
 
                 var textBlock = new TextBlock
                 {
                     Text = block.TranslatedText,
                     Foreground = new SolidColorBrush(block.TextColor),
                     FontWeight = FontWeights.SemiBold,
-                    FontSize = Math.Max(9.0, blockH * 0.78),
+                    FontSize = targetFontSize,
                     TextAlignment = WpfTextAlignment.Left,
                     TextWrapping = TextWrapping.NoWrap
                 };
@@ -398,13 +487,13 @@ namespace Lingo
 
                 OverlayCanvas.Children.Add(blockBorder);
 
-                // Smooth fade in
+                // Smooth cascade fade in
                 var fadeAnim = new DoubleAnimation
                 {
                     From = 0.0,
                     To = 1.0,
                     Duration = TimeSpan.FromMilliseconds(160),
-                    BeginTime = TimeSpan.FromMilliseconds(Math.Min(250, blockIndex * 8)),
+                    BeginTime = TimeSpan.FromMilliseconds(Math.Min(250, blockIndex * 6)),
                     EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
                 };
 
@@ -444,20 +533,27 @@ namespace Lingo
             ImageScaleTransform.BeginAnimation(ScaleTransform.ScaleYProperty, anim);
         }
 
-        private void ViewportGrid_MouseDown(object sender, WpfMouseButtonEventArgs e)
+        private void ViewportGrid_PreviewMouseDown(object sender, WpfMouseButtonEventArgs e)
         {
-            if (e.ChangedButton == MouseButton.Middle || (e.ChangedButton == MouseButton.Left && _currentZoom > 1.05))
+            if (e.MiddleButton == MouseButtonState.Pressed || (e.LeftButton == MouseButtonState.Pressed && _currentZoom > 1.05))
             {
                 _isPanning = true;
                 _panStartPoint = e.GetPosition(ViewportGrid);
+
+                // Stop any running animations so direct assignments to X/Y work instantly
+                ImageTranslateTransform.BeginAnimation(TranslateTransform.XProperty, null);
+                ImageTranslateTransform.BeginAnimation(TranslateTransform.YProperty, null);
+
                 _initialTranslateX = ImageTranslateTransform.X;
                 _initialTranslateY = ImageTranslateTransform.Y;
+
                 ViewportGrid.Cursor = WpfCursors.SizeAll;
                 ViewportGrid.CaptureMouse();
+                e.Handled = true;
             }
         }
 
-        private void ViewportGrid_MouseMove(object sender, WpfMouseEventArgs e)
+        private void ViewportGrid_PreviewMouseMove(object sender, WpfMouseEventArgs e)
         {
             if (_isPanning)
             {
@@ -467,16 +563,21 @@ namespace Lingo
 
                 ImageTranslateTransform.X = _initialTranslateX + deltaX;
                 ImageTranslateTransform.Y = _initialTranslateY + deltaY;
+                e.Handled = true;
             }
         }
 
-        private void ViewportGrid_MouseUp(object sender, WpfMouseButtonEventArgs e)
+        private void ViewportGrid_PreviewMouseUp(object sender, WpfMouseButtonEventArgs e)
         {
             if (_isPanning)
             {
-                _isPanning = false;
-                ViewportGrid.ReleaseMouseCapture();
-                ViewportGrid.Cursor = WpfCursors.Arrow;
+                if (e.MiddleButton == MouseButtonState.Released && e.LeftButton == MouseButtonState.Released)
+                {
+                    _isPanning = false;
+                    ViewportGrid.ReleaseMouseCapture();
+                    ViewportGrid.Cursor = WpfCursors.Arrow;
+                    e.Handled = true;
+                }
             }
         }
 
@@ -490,10 +591,11 @@ namespace Lingo
             _currentZoom = 1.0;
             ApplyZoomAnimation(1.0);
 
-            var resetX = new DoubleAnimation(0.0, TimeSpan.FromMilliseconds(180)) { EasingFunction = new QuadraticEase() };
-            var resetY = new DoubleAnimation(0.0, TimeSpan.FromMilliseconds(180)) { EasingFunction = new QuadraticEase() };
-            ImageTranslateTransform.BeginAnimation(TranslateTransform.XProperty, resetX);
-            ImageTranslateTransform.BeginAnimation(TranslateTransform.YProperty, resetY);
+            // Cancel any prior animations and reset transform cleanly
+            ImageTranslateTransform.BeginAnimation(TranslateTransform.XProperty, null);
+            ImageTranslateTransform.BeginAnimation(TranslateTransform.YProperty, null);
+            ImageTranslateTransform.X = 0.0;
+            ImageTranslateTransform.Y = 0.0;
 
             ZoomResetBtn.Content = "100%";
         }
