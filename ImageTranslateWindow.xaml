@@ -113,7 +113,10 @@
                         <Grid x:Name="ImageContainerGrid" 
                               HorizontalAlignment="Center" 
                               VerticalAlignment="Center" 
-                              RenderTransformOrigin="0.5,0.5">
+                              RenderTransformOrigin="0.5,0.5"
+                              TextOptions.TextFormattingMode="Ideal"
+                              TextOptions.TextRenderingMode="ClearType"
+                              RenderOptions.BitmapScalingMode="HighQuality">
                             <Grid.RenderTransform>
                                 <TransformGroup>
                                     <ScaleTransform x:Name="ImageScaleTransform" ScaleX="1.0" ScaleY="1.0" />
@@ -129,7 +132,11 @@
                             <!-- Overlay Canvas for In-Place Text Replacement Blocks -->
                             <Canvas x:Name="OverlayCanvas" 
                                     HorizontalAlignment="Left" 
-                                    VerticalAlignment="Top" />
+                                    VerticalAlignment="Top"
+                                    TextOptions.TextFormattingMode="Ideal"
+                                    TextOptions.TextRenderingMode="ClearType"
+                                    TextOptions.TextHintingMode="Auto"
+                                    RenderOptions.ClearTypeHint="Enabled" />
                         </Grid>
 
                         <!-- Loading Progress Overlay with Aesthetic Laser Beam Scanning Effect (No Text) -->

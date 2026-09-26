@@ -523,19 +523,11 @@ namespace Lingo
                 {
                     Text = block.TranslatedText,
                     Foreground = new SolidColorBrush(smartTextColor),
+                    FontFamily = new System.Windows.Media.FontFamily("Segoe UI Variable Text, Segoe UI, sans-serif"),
                     FontWeight = FontWeights.SemiBold,
                     FontSize = targetFontSize,
                     TextAlignment = WpfTextAlignment.Left,
-                    TextWrapping = TextWrapping.NoWrap,
-                    Effect = new System.Windows.Media.Effects.DropShadowEffect
-                    {
-                        BlurRadius = 3,
-                        ShadowDepth = 0,
-                        Color = (smartTextColor.R * 0.299 + smartTextColor.G * 0.587 + smartTextColor.B * 0.114 > 128) 
-                            ? WpfColor.FromArgb(200, 0, 0, 0) 
-                            : WpfColor.FromArgb(200, 255, 255, 255),
-                        Opacity = 0.80
-                    }
+                    TextWrapping = TextWrapping.NoWrap
                 };
 
                 viewbox.Child = textBlock;
