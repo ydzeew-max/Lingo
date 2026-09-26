@@ -979,21 +979,34 @@ namespace Lingo
             try
             {
                 _tts.Stop();
+                _cts?.Cancel();
+
+                // Hide current window so it is not visible during snipping
                 Hide();
-                await Task.Delay(150);
+                await Task.Delay(160);
 
                 var snipWindow = new SnippingWindow();
                 bool? result = snipWindow.ShowDialog();
 
-                Show();
-                Activate();
-
                 if (result == true && snipWindow.CapturedBitmap != null)
                 {
-                    _currentBitmap.Dispose();
-                    _currentBitmap = (Bitmap)snipWindow.CapturedBitmap.Clone();
-                    DisplayImage(_currentBitmap);
-                    StartRecognitionAndTranslation();
+                    using var captured = snipWindow.CapturedBitmap;
+
+                    // Open a brand new window from scratch with completely fresh layout & state
+                    var newWin = new ImageTranslateWindow(captured)
+                    {
+                        Owner = Owner
+                    };
+                    newWin.Show();
+
+                    // Destroy the old window completely
+                    Close();
+                }
+                else
+                {
+                    // User cancelled snip, restore this window
+                    Show();
+                    Activate();
                 }
             }
             catch (Exception ex)

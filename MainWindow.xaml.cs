@@ -543,6 +543,12 @@ namespace Lingo
         {
             try
             {
+                // Close any existing photo translation windows to guarantee a clean slate from scratch
+                foreach (var win in System.Windows.Application.Current.Windows.OfType<ImageTranslateWindow>().ToList())
+                {
+                    try { win.Close(); } catch { }
+                }
+
                 var imgWin = new ImageTranslateWindow(bitmap)
                 {
                     Owner = this
