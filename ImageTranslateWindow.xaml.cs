@@ -1100,7 +1100,7 @@ namespace Lingo
                     using var fs = new FileStream(sfd.FileName, FileMode.Create, FileAccess.Write);
                     encoder.Save(fs);
 
-                    AnimateCheckmark(SaveImageIcon, SaveImageScale, PackIconKind.Download);
+                    AnimateCheckmark(SaveImageIcon, SaveImageScale, PackIconKind.ContentSaveOutline);
                 }
             }
             catch (Exception ex)

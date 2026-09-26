@@ -20,7 +20,7 @@ namespace Lingo.Services
             CurrentSettings = Load();
             try
             {
-                ShellContextMenuService.SetContextMenuEnabled(CurrentSettings.EnableShellContextMenu);
+                ShellContextMenuService.EnsureRegisteredOnStartup(CurrentSettings.EnableShellContextMenu);
             }
             catch { }
         }

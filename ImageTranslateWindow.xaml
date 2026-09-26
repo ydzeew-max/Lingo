@@ -415,13 +415,13 @@
                                     </materialDesign:PackIcon>
                                 </Button>
 
-                                <!-- Quick Action: Save Translated Image to Disk -->
+                                <!-- Quick Action: Save Translated Image to Disk (Opens File Explorer) -->
                                 <Button Style="{StaticResource TitleBarButtonStyle}" 
                                         Width="32" Height="30" 
                                         Margin="0,0,4,0"
                                         Click="SaveImage_Click" 
-                                        ToolTip="Сохранить изображение с переводом на диск">
-                                    <materialDesign:PackIcon x:Name="SaveImageIcon" Kind="Download" Width="16" Height="16" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
+                                        ToolTip="Сохранить фото в файл... (открыть Проводник Windows)">
+                                    <materialDesign:PackIcon x:Name="SaveImageIcon" Kind="ContentSaveOutline" Width="16" Height="16" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
                                         <materialDesign:PackIcon.RenderTransform>
                                             <ScaleTransform x:Name="SaveImageScale" ScaleX="1.0" ScaleY="1.0" />
                                         </materialDesign:PackIcon.RenderTransform>
