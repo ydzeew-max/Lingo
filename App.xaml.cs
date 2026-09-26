@@ -18,6 +18,8 @@ namespace Lingo
         public static SettingsService Settings { get; private set; } = null!;
         public static TranslationEngine Translator { get; private set; } = null!;
 
+        public static bool IsStartingWithImage { get; private set; }
+
         protected override void OnStartup(System.Windows.StartupEventArgs e)
         {
             DispatcherUnhandledException += (s, args) =>
@@ -40,6 +42,7 @@ namespace Lingo
             };
 
             string? imageArg = ExtractImageArgument(e.Args);
+            IsStartingWithImage = !string.IsNullOrEmpty(imageArg);
 
             // Single Instance Enforcement
             _mutex = new Mutex(true, MutexName, out bool isNewInstance);
@@ -52,7 +55,8 @@ namespace Lingo
                     {
                         string queueFile = GetPendingImageQueuePath();
                         Directory.CreateDirectory(Path.GetDirectoryName(queueFile)!);
-                        File.WriteAllText(queueFile, imageArg);
+                        File.WriteAllText(queueFile, imageArg, System.Text.Encoding.UTF8);
+                        Thread.Sleep(40);
                     }
 
                     using var existingEvent = EventWaitHandle.OpenExisting(EventName);
@@ -78,19 +82,30 @@ namespace Lingo
                     Current.Dispatcher.Invoke(() =>
                     {
                         string queueFile = GetPendingImageQueuePath();
-                        if (File.Exists(queueFile))
+                        string? targetPath = null;
+
+                        for (int attempt = 0; attempt < 8; attempt++)
                         {
                             try
                             {
-                                string path = File.ReadAllText(queueFile).Trim();
-                                File.Delete(queueFile);
-                                if (File.Exists(path))
+                                if (File.Exists(queueFile))
                                 {
-                                    OpenImageFileForTranslation(path);
-                                    return;
+                                    targetPath = File.ReadAllText(queueFile, System.Text.Encoding.UTF8).Trim();
+                                    File.Delete(queueFile);
+                                    break;
                                 }
                             }
-                            catch { }
+                            catch (IOException)
+                            {
+                                Thread.Sleep(30);
+                            }
+                            catch { break; }
+                        }
+
+                        if (!string.IsNullOrEmpty(targetPath) && File.Exists(targetPath))
+                        {
+                            OpenImageFileForTranslation(targetPath);
+                            return;
                         }
 
                         if (Current.MainWindow is MainWindow win)
@@ -124,11 +139,24 @@ namespace Lingo
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Lingo", "pending_image.txt");
         }
 
-        private static string? ExtractImageArgument(string[] args)
+        private static string? ExtractImageArgument(string[]? args)
         {
-            if (args == null || args.Length == 0) return null;
+            var allArgs = new System.Collections.Generic.List<string>();
+            if (args != null) allArgs.AddRange(args);
+            try
+            {
+                var cmdLine = Environment.GetCommandLineArgs();
+                if (cmdLine != null && cmdLine.Length > 1)
+                {
+                    for (int i = 1; i < cmdLine.Length; i++)
+                    {
+                        if (!allArgs.Contains(cmdLine[i])) allArgs.Add(cmdLine[i]);
+                    }
+                }
+            }
+            catch { }
 
-            foreach (var arg in args)
+            foreach (var arg in allArgs)
             {
                 if (string.IsNullOrWhiteSpace(arg)) continue;
                 if (arg.Equals("--image", StringComparison.OrdinalIgnoreCase) ||
@@ -136,10 +164,10 @@ namespace Lingo
                     arg.Equals("--translate", StringComparison.OrdinalIgnoreCase))
                     continue;
 
-                string clean = arg.Trim('"', '\'');
+                string clean = arg.Trim('"', '\'', ' ');
                 if (File.Exists(clean))
                 {
-                    return clean;
+                    return Path.GetFullPath(clean);
                 }
             }
 

@@ -7,7 +7,7 @@ namespace Lingo.Services
 {
     public static class ShellContextMenuService
     {
-        private const string MenuTitle = "Перевести с Lingo";
+        private const string MenuTitle = "Translate with Lingo";
         private static readonly string[] TargetAssociations = new[]
         {
             "image",
@@ -42,14 +42,12 @@ namespace Lingo.Services
                 string currentExe = GetCurrentExePath();
                 if (!File.Exists(currentExe)) return;
 
-                // Check if already registered and points to the same exe
                 using var cmdKey = Registry.CurrentUser.OpenSubKey(@"Software\Classes\SystemFileAssociations\image\shell\Lingo\command");
                 string? registeredCmd = cmdKey?.GetValue("") as string;
 
                 string expectedCmd = $"\"{currentExe}\" --image \"%1\"";
                 if (registeredCmd != expectedCmd)
                 {
-                    // Register or update paths
                     SetContextMenuEnabled(true);
                 }
             }
@@ -71,11 +69,11 @@ namespace Lingo.Services
                         using var shellKey = Registry.CurrentUser.CreateSubKey(shellPath);
                         if (shellKey != null)
                         {
-                            shellKey.SetValue("", MenuTitle);
-                            shellKey.SetValue("Icon", $"\"{exePath}\",0");
+                            shellKey.SetValue("", MenuTitle, RegistryValueKind.String);
+                            shellKey.SetValue("Icon", $"\"{exePath}\",0", RegistryValueKind.String);
 
                             using var cmdKey = shellKey.CreateSubKey("command");
-                            cmdKey?.SetValue("", $"\"{exePath}\" --image \"%1\"");
+                            cmdKey?.SetValue("", $"\"{exePath}\" --image \"%1\"", RegistryValueKind.String);
                         }
                     }
                 }
@@ -94,25 +92,25 @@ namespace Lingo.Services
             }
         }
 
-        private static string GetCurrentExePath()
+        public static string GetCurrentExePath()
         {
             string? procPath = Environment.ProcessPath;
             if (!string.IsNullOrEmpty(procPath) && File.Exists(procPath))
-                return procPath;
+                return Path.GetFullPath(procPath);
 
             try
             {
                 string? mainMod = Process.GetCurrentProcess().MainModule?.FileName;
                 if (!string.IsNullOrEmpty(mainMod) && File.Exists(mainMod))
-                    return mainMod;
+                    return Path.GetFullPath(mainMod);
             }
             catch { }
 
             string localExe = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Lingo.exe");
             if (File.Exists(localExe))
-                return localExe;
+                return Path.GetFullPath(localExe);
 
-            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "publish", "Lingo.exe");
+            return Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "publish", "Lingo.exe"));
         }
     }
 }

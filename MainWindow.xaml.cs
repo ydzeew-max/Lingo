@@ -167,7 +167,16 @@ namespace Lingo
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             Topmost = App.Settings.CurrentSettings.AlwaysOnTop;
-            PlayEntranceAnimation();
+
+            if (App.IsStartingWithImage)
+            {
+                // Launched directly with an image: hide main window and stay in tray
+                Hide();
+            }
+            else
+            {
+                PlayEntranceAnimation();
+            }
 
             try
             {

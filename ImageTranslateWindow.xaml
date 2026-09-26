@@ -87,6 +87,35 @@
 
                     <!-- Titlebar Controls -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True">
+                        <!-- Quick Save Image Button in Title Bar -->
+                        <Button Height="28" 
+                                Padding="9,0" 
+                                Margin="0,0,10,0" 
+                                Background="#1A60CDFF" 
+                                BorderBrush="#3560CDFF" 
+                                BorderThickness="1" 
+                                Cursor="Hand" 
+                                Click="SaveImage_Click" 
+                                ToolTip="Сохранить фото в файл... (открыть Проводник Windows)">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="14" Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="bd" Property="Background" Value="#3060CDFF"/>
+                                            <Setter TargetName="bd" Property="BorderBrush" Value="#6060CDFF"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Button.Template>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <materialDesign:PackIcon Kind="ContentSaveOutline" Width="14" Height="14" Foreground="#60CDFF" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                <TextBlock Text="Сохранить" Foreground="#FFFFFF" FontWeight="SemiBold" FontSize="11.5" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
                         <Button Style="{StaticResource TitleBarButtonStyle}" Click="Minimize_Click" ToolTip="Свернуть">
                             <materialDesign:PackIcon Kind="Minus" Width="16" Height="16" Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" VerticalAlignment="Center"/>
                         </Button>
