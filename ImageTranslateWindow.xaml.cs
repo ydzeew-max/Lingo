@@ -82,10 +82,10 @@ namespace Lingo
 
         // Zoom & Pan state
         private double _currentZoom = 1.0;
+        private double _fitScale = 1.0;
+        private bool _isUserZoomed = false;
         private bool _isPanning = false;
-        private WpfPoint _panStartPoint;
-        private double _initialTranslateX;
-        private double _initialTranslateY;
+        private WpfPoint _lastPanPoint;
 
         public ImageTranslateWindow(Bitmap bitmap)
         {
@@ -111,6 +111,13 @@ namespace Lingo
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             _isInitializing = true;
+
+            // Auto-size window to fit image comfortably up to screen bounds
+            var workArea = SystemParameters.WorkArea;
+            double targetWinW = Math.Min(workArea.Width * 0.90, Math.Max(MinWidth, _currentBitmap.Width + 60));
+            double targetWinH = Math.Min(workArea.Height * 0.90, Math.Max(MinHeight, _currentBitmap.Height + 130));
+            Width = targetWinW;
+            Height = targetWinH;
 
             // Smooth Window Entrance Animation (Fade + Scale In)
             PlayEntranceAnimation();
@@ -208,7 +215,43 @@ namespace Lingo
             OverlayCanvas.Height = bmp.Height;
             OverlayCanvas.Children.Clear();
 
-            ResetZoom();
+            Dispatcher.InvokeAsync(() =>
+            {
+                FitImageToViewport();
+            }, DispatcherPriority.Loaded);
+        }
+
+        private void ViewportGrid_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (!_isUserZoomed && _currentBitmap != null)
+            {
+                FitImageToViewport();
+            }
+        }
+
+        private void FitImageToViewport()
+        {
+            if (_currentBitmap == null) return;
+
+            double availW = Math.Max(150, ViewportGrid.ActualWidth > 0 ? ViewportGrid.ActualWidth - 36 : ActualWidth - 70);
+            double availH = Math.Max(150, ViewportGrid.ActualHeight > 0 ? ViewportGrid.ActualHeight - 36 : ActualHeight - 130);
+
+            double scaleX = availW / _currentBitmap.Width;
+            double scaleY = availH / _currentBitmap.Height;
+            double fitScale = Math.Min(scaleX, scaleY);
+
+            // Scale to fit completely without any cropping
+            _fitScale = fitScale < 1.0 ? fitScale : 1.0;
+            _currentZoom = _fitScale;
+            _isUserZoomed = false;
+
+            ImageTranslateTransform.BeginAnimation(TranslateTransform.XProperty, null);
+            ImageTranslateTransform.BeginAnimation(TranslateTransform.YProperty, null);
+            ImageTranslateTransform.X = 0.0;
+            ImageTranslateTransform.Y = 0.0;
+
+            ApplyZoomAnimation(_currentZoom);
+            UpdateZoomButtonText();
         }
 
         private async void StartRecognitionAndTranslation()
@@ -415,13 +458,20 @@ namespace Lingo
                     blockW = Math.Min(maxAvailableW, desiredW);
                 }
 
+                // Pixel-accurate background reconstruction (supports gradients, shading, and solid colors)
+                var bgBrush = CreateReconstructedBackgroundBrush(
+                    _currentBitmap, 
+                    (int)origX, (int)origY, (int)blockW, (int)blockH, 
+                    block.BackgroundColor, 
+                    out WpfColor smartTextColor);
+
                 var blockBorder = new Border
                 {
                     Width = blockW,
                     Height = blockH,
                     MaxWidth = maxAvailableW,
                     MaxHeight = maxAvailableH,
-                    Background = new SolidColorBrush(block.BackgroundColor), // 100% opaque dominant cluster background
+                    Background = bgBrush,
                     CornerRadius = new CornerRadius(0),
                     BorderThickness = new Thickness(0),
                     Cursor = WpfCursors.Hand,
@@ -472,11 +522,20 @@ namespace Lingo
                 var textBlock = new TextBlock
                 {
                     Text = block.TranslatedText,
-                    Foreground = new SolidColorBrush(block.TextColor),
+                    Foreground = new SolidColorBrush(smartTextColor),
                     FontWeight = FontWeights.SemiBold,
                     FontSize = targetFontSize,
                     TextAlignment = WpfTextAlignment.Left,
-                    TextWrapping = TextWrapping.NoWrap
+                    TextWrapping = TextWrapping.NoWrap,
+                    Effect = new System.Windows.Media.Effects.DropShadowEffect
+                    {
+                        BlurRadius = 3,
+                        ShadowDepth = 0,
+                        Color = (smartTextColor.R * 0.299 + smartTextColor.G * 0.587 + smartTextColor.B * 0.114 > 128) 
+                            ? WpfColor.FromArgb(200, 0, 0, 0) 
+                            : WpfColor.FromArgb(200, 255, 255, 255),
+                        Opacity = 0.80
+                    }
                 };
 
                 viewbox.Child = textBlock;
@@ -504,17 +563,142 @@ namespace Lingo
             UpdateViewMode();
         }
 
+        private System.Windows.Media.Brush CreateReconstructedBackgroundBrush(
+            Bitmap? sourceBmp, 
+            int blockX, int blockY, int blockW, int blockH, 
+            WpfColor fallbackColor, 
+            out WpfColor recommendedTextColor)
+        {
+            recommendedTextColor = (fallbackColor.R * 0.299 + fallbackColor.G * 0.587 + fallbackColor.B * 0.114 > 132) 
+                ? WpfColor.FromRgb(15, 15, 15) 
+                : WpfColor.FromRgb(250, 250, 250);
+
+            if (sourceBmp == null || blockW < 4 || blockH < 4)
+            {
+                return new SolidColorBrush(fallbackColor);
+            }
+
+            try
+            {
+                int imgW = sourceBmp.Width;
+                int imgH = sourceBmp.Height;
+
+                int sampleTopY = Math.Max(0, blockY - 2);
+                int sampleBotY = Math.Min(imgH - 1, blockY + blockH + 1);
+                int sampleLeftX = Math.Max(0, blockX - 2);
+                int sampleRightX = Math.Min(imgW - 1, blockX + blockW + 1);
+
+                // Sample edge pixels
+                int[] topRow = new int[blockW];
+                int[] botRow = new int[blockW];
+                for (int x = 0; x < blockW; x++)
+                {
+                    int px = Math.Clamp(blockX + x, 0, imgW - 1);
+                    topRow[x] = sourceBmp.GetPixel(px, sampleTopY).ToArgb();
+                    botRow[x] = sourceBmp.GetPixel(px, sampleBotY).ToArgb();
+                }
+
+                int[] leftCol = new int[blockH];
+                int[] rightCol = new int[blockH];
+                for (int y = 0; y < blockH; y++)
+                {
+                    int py = Math.Clamp(blockY + y, 0, imgH - 1);
+                    leftCol[y] = sourceBmp.GetPixel(sampleLeftX, py).ToArgb();
+                    rightCol[y] = sourceBmp.GetPixel(sampleRightX, py).ToArgb();
+                }
+
+                int cTL = topRow[0];
+                int cTR = topRow[blockW - 1];
+                int cBL = botRow[0];
+                int cBR = botRow[blockW - 1];
+
+                byte tlR = (byte)(cTL >> 16), tlG = (byte)(cTL >> 8), tlB = (byte)cTL;
+                byte trR = (byte)(cTR >> 16), trG = (byte)(cTR >> 8), trB = (byte)cTR;
+                byte blR = (byte)(cBL >> 16), blG = (byte)(cBL >> 8), blB = (byte)cBL;
+                byte brR = (byte)(cBR >> 16), brG = (byte)(cBR >> 8), brB = (byte)cBR;
+
+                // Bilinear boundary blend (Coons Patch) for pixel-for-pixel gradient & texture match
+                byte[] pixels = new byte[blockW * blockH * 4];
+                int offset = 0;
+                long totalLum = 0;
+
+                for (int y = 0; y < blockH; y++)
+                {
+                    double v = blockH > 1 ? (double)y / (blockH - 1) : 0.5;
+                    double invV = 1.0 - v;
+
+                    int leftPixel = leftCol[y];
+                    int rightPixel = rightCol[y];
+                    byte leftR = (byte)(leftPixel >> 16), leftG = (byte)(leftPixel >> 8), leftB = (byte)leftPixel;
+                    byte rightR = (byte)(rightPixel >> 16), rightG = (byte)(rightPixel >> 8), rightB = (byte)rightPixel;
+
+                    for (int x = 0; x < blockW; x++)
+                    {
+                        double u = blockW > 1 ? (double)x / (blockW - 1) : 0.5;
+                        double invU = 1.0 - u;
+
+                        int topPixel = topRow[x];
+                        int botPixel = botRow[x];
+                        byte topR = (byte)(topPixel >> 16), topG = (byte)(topPixel >> 8), topB = (byte)topPixel;
+                        byte botR = (byte)(botPixel >> 16), botG = (byte)(botPixel >> 8), botB = (byte)botPixel;
+
+                        double rTB = invV * topR + v * botR;
+                        double gTB = invV * topG + v * botG;
+                        double bTB = invV * topB + v * botB;
+
+                        double rLR = invU * leftR + u * rightR;
+                        double gLR = invU * leftG + u * rightG;
+                        double bLR = invU * leftB + u * rightB;
+
+                        double rCorner = invU * invV * tlR + u * invV * trR + invU * v * blR + u * v * brR;
+                        double gCorner = invU * invV * tlG + u * invV * trG + invU * v * blG + u * v * brG;
+                        double bCorner = invU * invV * tlB + u * invV * trB + invU * v * blB + u * v * brB;
+
+                        int r = Math.Clamp((int)Math.Round(rTB + rLR - rCorner), 0, 255);
+                        int g = Math.Clamp((int)Math.Round(gTB + gLR - gCorner), 0, 255);
+                        int b = Math.Clamp((int)Math.Round(bTB + bLR - bCorner), 0, 255);
+
+                        pixels[offset++] = (byte)b;
+                        pixels[offset++] = (byte)g;
+                        pixels[offset++] = (byte)r;
+                        pixels[offset++] = 255;
+
+                        totalLum += (long)(0.299 * r + 0.587 * g + 0.114 * b);
+                    }
+                }
+
+                double avgLum = (double)totalLum / (blockW * blockH * 255.0);
+                recommendedTextColor = avgLum > 0.52 ? WpfColor.FromRgb(15, 15, 15) : WpfColor.FromRgb(250, 250, 250);
+
+                var patchSource = BitmapSource.Create(
+                    blockW, blockH,
+                    96, 96,
+                    PixelFormats.Bgr32,
+                    null,
+                    pixels,
+                    blockW * 4);
+                patchSource.Freeze();
+
+                return new ImageBrush(patchSource) { Stretch = Stretch.Fill };
+            }
+            catch
+            {
+                return new SolidColorBrush(fallbackColor);
+            }
+        }
+
         // ================= ZOOM & PAN LOGIC =================
         private void ViewportGrid_MouseWheel(object sender, WpfMouseWheelEventArgs e)
         {
+            _isUserZoomed = true;
             double zoomFactor = e.Delta > 0 ? 1.15 : (1.0 / 1.15);
-            double newZoom = Math.Max(0.5, Math.Min(4.5, _currentZoom * zoomFactor));
+            double newZoom = Math.Max(0.2, Math.Min(6.0, _currentZoom * zoomFactor));
 
-            if (Math.Abs(newZoom - _currentZoom) > 0.01)
+            if (Math.Abs(newZoom - _currentZoom) > 0.005)
             {
                 _currentZoom = newZoom;
                 ApplyZoomAnimation(_currentZoom);
-                ZoomResetBtn.Content = $"{(int)Math.Round(_currentZoom * 100)}%";
+                UpdateZoomButtonText();
             }
 
             e.Handled = true;
@@ -525,7 +709,7 @@ namespace Lingo
             var anim = new DoubleAnimation
             {
                 To = targetScale,
-                Duration = TimeSpan.FromMilliseconds(180),
+                Duration = TimeSpan.FromMilliseconds(160),
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
             };
 
@@ -535,18 +719,18 @@ namespace Lingo
 
         private void ViewportGrid_PreviewMouseDown(object sender, WpfMouseButtonEventArgs e)
         {
-            if (e.MiddleButton == MouseButtonState.Pressed || (e.LeftButton == MouseButtonState.Pressed && _currentZoom > 1.05))
+            bool isMiddle = e.ChangedButton == MouseButton.Middle || e.MiddleButton == MouseButtonState.Pressed;
+            bool isRight = e.ChangedButton == MouseButton.Right || e.RightButton == MouseButtonState.Pressed;
+            bool isLeft = e.ChangedButton == MouseButton.Left || e.LeftButton == MouseButtonState.Pressed;
+
+            // Middle button always pans everywhere in the viewport.
+            // Right button pans when clicking the background (blocks handle RightButtonUp).
+            // Left button pans when zoomed in or clicking viewport/canvas/image.
+            if (isMiddle || (isRight && e.OriginalSource is not TextBlock) || 
+                (isLeft && (_currentZoom > _fitScale * 1.05 || e.OriginalSource is System.Windows.Controls.Image || e.OriginalSource is Grid || e.OriginalSource is Canvas)))
             {
                 _isPanning = true;
-                _panStartPoint = e.GetPosition(ViewportGrid);
-
-                // Stop any running animations so direct assignments to X/Y work instantly
-                ImageTranslateTransform.BeginAnimation(TranslateTransform.XProperty, null);
-                ImageTranslateTransform.BeginAnimation(TranslateTransform.YProperty, null);
-
-                _initialTranslateX = ImageTranslateTransform.X;
-                _initialTranslateY = ImageTranslateTransform.Y;
-
+                _lastPanPoint = e.GetPosition(this);
                 ViewportGrid.Cursor = WpfCursors.SizeAll;
                 ViewportGrid.CaptureMouse();
                 e.Handled = true;
@@ -557,12 +741,26 @@ namespace Lingo
         {
             if (_isPanning)
             {
-                var curPos = e.GetPosition(ViewportGrid);
-                double deltaX = curPos.X - _panStartPoint.X;
-                double deltaY = curPos.Y - _panStartPoint.Y;
+                bool isAnyButtonDown = e.MiddleButton == MouseButtonState.Pressed 
+                                    || e.RightButton == MouseButtonState.Pressed 
+                                    || e.LeftButton == MouseButtonState.Pressed;
 
-                ImageTranslateTransform.X = _initialTranslateX + deltaX;
-                ImageTranslateTransform.Y = _initialTranslateY + deltaY;
+                if (!isAnyButtonDown)
+                {
+                    _isPanning = false;
+                    ViewportGrid.ReleaseMouseCapture();
+                    ViewportGrid.Cursor = WpfCursors.Arrow;
+                    return;
+                }
+
+                var curPos = e.GetPosition(this);
+                double deltaX = curPos.X - _lastPanPoint.X;
+                double deltaY = curPos.Y - _lastPanPoint.Y;
+
+                ImageTranslateTransform.X += deltaX;
+                ImageTranslateTransform.Y += deltaY;
+
+                _lastPanPoint = curPos;
                 e.Handled = true;
             }
         }
@@ -571,7 +769,9 @@ namespace Lingo
         {
             if (_isPanning)
             {
-                if (e.MiddleButton == MouseButtonState.Released && e.LeftButton == MouseButtonState.Released)
+                if (e.MiddleButton == MouseButtonState.Released && 
+                    e.RightButton == MouseButtonState.Released && 
+                    e.LeftButton == MouseButtonState.Released)
                 {
                     _isPanning = false;
                     ViewportGrid.ReleaseMouseCapture();
@@ -583,21 +783,35 @@ namespace Lingo
 
         private void ZoomReset_Click(object sender, RoutedEventArgs e)
         {
-            ResetZoom();
+            // Toggle between Fit to Viewport and 100% (1:1)
+            if (Math.Abs(_currentZoom - _fitScale) < 0.05 && Math.Abs(_fitScale - 1.0) > 0.05)
+            {
+                _currentZoom = 1.0;
+                _isUserZoomed = true;
+                ApplyZoomAnimation(1.0);
+            }
+            else
+            {
+                FitImageToViewport();
+            }
+            UpdateZoomButtonText();
         }
 
         private void ResetZoom()
         {
-            _currentZoom = 1.0;
-            ApplyZoomAnimation(1.0);
+            FitImageToViewport();
+        }
 
-            // Cancel any prior animations and reset transform cleanly
-            ImageTranslateTransform.BeginAnimation(TranslateTransform.XProperty, null);
-            ImageTranslateTransform.BeginAnimation(TranslateTransform.YProperty, null);
-            ImageTranslateTransform.X = 0.0;
-            ImageTranslateTransform.Y = 0.0;
-
-            ZoomResetBtn.Content = "100%";
+        private void UpdateZoomButtonText()
+        {
+            if (Math.Abs(_currentZoom - _fitScale) < 0.03 && Math.Abs(_fitScale - 1.0) > 0.05)
+            {
+                ZoomResetBtn.Content = $"Вписать ({(int)Math.Round(_currentZoom * 100)}%)";
+            }
+            else
+            {
+                ZoomResetBtn.Content = $"{(int)Math.Round(_currentZoom * 100)}%";
+            }
         }
 
         // ================= VIEW MODES & TOASTS =================

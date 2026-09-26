@@ -103,6 +103,7 @@
                 <Border Grid.Row="1" Background="#550A0A0A" CornerRadius="0,0,11,11" ClipToBounds="True">
                     <Grid x:Name="ViewportGrid" 
                           Background="Transparent"
+                          SizeChanged="ViewportGrid_SizeChanged"
                           MouseWheel="ViewportGrid_MouseWheel"
                           PreviewMouseDown="ViewportGrid_PreviewMouseDown"
                           PreviewMouseMove="ViewportGrid_PreviewMouseMove"
