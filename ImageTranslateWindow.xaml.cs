@@ -196,24 +196,32 @@ namespace Lingo
 
         private void DisplayImage(Bitmap bmp)
         {
-            using var ms = new MemoryStream();
-            bmp.Save(ms, ImageFormat.Png);
-            ms.Position = 0;
+            var rect = new Rectangle(0, 0, bmp.Width, bmp.Height);
+            var bmpData = bmp.LockBits(rect, ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            try
+            {
+                var bitmapSource = BitmapSource.Create(
+                    bmp.Width, bmp.Height,
+                    96, 96,
+                    PixelFormats.Bgra32,
+                    null,
+                    bmpData.Scan0,
+                    bmpData.Stride * bmp.Height,
+                    bmpData.Stride);
+                bitmapSource.Freeze();
 
-            var bitmapImage = new BitmapImage();
-            bitmapImage.BeginInit();
-            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-            bitmapImage.StreamSource = ms;
-            bitmapImage.EndInit();
-            bitmapImage.Freeze();
+                MainImageDisplay.Source = bitmapSource;
+                MainImageDisplay.Width = bmp.Width;
+                MainImageDisplay.Height = bmp.Height;
 
-            MainImageDisplay.Source = bitmapImage;
-            MainImageDisplay.Width = bmp.Width;
-            MainImageDisplay.Height = bmp.Height;
-
-            OverlayCanvas.Width = bmp.Width;
-            OverlayCanvas.Height = bmp.Height;
-            OverlayCanvas.Children.Clear();
+                OverlayCanvas.Width = bmp.Width;
+                OverlayCanvas.Height = bmp.Height;
+                OverlayCanvas.Children.Clear();
+            }
+            finally
+            {
+                bmp.UnlockBits(bmpData);
+            }
 
             Dispatcher.InvokeAsync(() =>
             {
@@ -449,14 +457,6 @@ namespace Lingo
 
                 double blockW = Math.Max(10.0, Math.Min(maxAvailableW, block.Width));
                 double blockH = Math.Max(10.0, Math.Min(maxAvailableH, block.Height));
-
-                // If translated text is longer, allow subtle expansion but strictly clamp to available width
-                if (block.TranslatedText.Length > block.OriginalText.Length)
-                {
-                    double ratio = (double)block.TranslatedText.Length / Math.Max(1, block.OriginalText.Length);
-                    double desiredW = blockW * Math.Min(1.22, ratio);
-                    blockW = Math.Min(maxAvailableW, desiredW);
-                }
 
                 // Pixel-accurate background reconstruction (supports gradients, shading, and solid colors)
                 var bgBrush = CreateReconstructedBackgroundBrush(

@@ -105,24 +105,31 @@ namespace Lingo
                 ReleaseMouseCapture();
 
                 var currentPoint = e.GetPosition(SelectionCanvas);
-                double rectX = Math.Min(_startPoint.X, currentPoint.X);
-                double rectY = Math.Min(_startPoint.Y, currentPoint.Y);
-                double rectW = Math.Abs(currentPoint.X - _startPoint.X);
-                double rectH = Math.Abs(currentPoint.Y - _startPoint.Y);
 
-                if (rectW > 5 && rectH > 5 && _fullScreenCapture != null)
+                if (_fullScreenCapture != null)
                 {
                     try
                     {
-                        double ratioX = (double)_fullScreenCapture.Width / Width;
-                        double ratioY = (double)_fullScreenCapture.Height / Height;
+                        int physLeft = System.Windows.Forms.SystemInformation.VirtualScreen.Left;
+                        int physTop = System.Windows.Forms.SystemInformation.VirtualScreen.Top;
 
-                        int cropX = Math.Max(0, (int)Math.Round(rectX * ratioX));
-                        int cropY = Math.Max(0, (int)Math.Round(rectY * ratioY));
-                        int cropW = Math.Min(_fullScreenCapture.Width - cropX, (int)Math.Round(rectW * ratioX));
-                        int cropH = Math.Min(_fullScreenCapture.Height - cropY, (int)Math.Round(rectH * ratioY));
+                        var startScreen = PointToScreen(_startPoint);
+                        var endScreen = PointToScreen(currentPoint);
 
-                        if (cropW > 4 && cropH > 4)
+                        int pLeft = (int)Math.Round(Math.Min(startScreen.X, endScreen.X));
+                        int pTop = (int)Math.Round(Math.Min(startScreen.Y, endScreen.Y));
+                        int pRight = (int)Math.Round(Math.Max(startScreen.X, endScreen.X));
+                        int pBottom = (int)Math.Round(Math.Max(startScreen.Y, endScreen.Y));
+
+                        int cropX = Math.Max(0, pLeft - physLeft);
+                        int cropY = Math.Max(0, pTop - physTop);
+                        int cropW = Math.Max(0, pRight - pLeft);
+                        int cropH = Math.Max(0, pBottom - pTop);
+
+                        cropW = Math.Min(_fullScreenCapture.Width - cropX, cropW);
+                        cropH = Math.Min(_fullScreenCapture.Height - cropY, cropH);
+
+                        if (cropW > 6 && cropH > 6)
                         {
                             CapturedBitmap = _fullScreenCapture.Clone(new Rectangle(cropX, cropY, cropW, cropH), _fullScreenCapture.PixelFormat);
                             DialogResult = true;
