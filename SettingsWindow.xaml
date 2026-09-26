@@ -177,7 +177,7 @@
                                 <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,0,0,10" />
 
                                 <!-- Row 2: Minimize to Tray on Close -->
-                                <Grid>
+                                <Grid Margin="0,0,0,10">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
@@ -193,6 +193,28 @@
                                               VerticalAlignment="Center" 
                                               Margin="0"
                                               ToolTip="При выключении крестик полностью закрывает приложение" />
+                                </Grid>
+
+                                <!-- Divider line -->
+                                <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,0,0,10" />
+
+                                <!-- Row 3: Windows Explorer Context Menu -->
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Меню Проводника Windows" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" FontSize="13"/>
+                                        <TextBlock Text="Пункт «Перевести с Lingo» при ПКМ на изображения" Foreground="{StaticResource TextSecondary}" FontSize="11.5" Margin="0,2,0,0"/>
+                                    </StackPanel>
+
+                                    <CheckBox x:Name="ExplorerContextMenuCheck" 
+                                              Grid.Column="1" 
+                                              VerticalAlignment="Center" 
+                                              Margin="0"
+                                              ToolTip="Добавляет пункт перевода изображений в контекстное меню Проводника Windows" />
                                 </Grid>
                             </StackPanel>
                         </Border>

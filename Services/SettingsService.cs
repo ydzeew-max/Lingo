@@ -18,6 +18,11 @@ namespace Lingo.Services
         public SettingsService()
         {
             CurrentSettings = Load();
+            try
+            {
+                ShellContextMenuService.SetContextMenuEnabled(CurrentSettings.EnableShellContextMenu);
+            }
+            catch { }
         }
 
         public AppSettings Load()
@@ -44,6 +49,12 @@ namespace Lingo.Services
                 Directory.CreateDirectory(FolderPath);
                 string json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(FilePath, json);
+
+                try
+                {
+                    ShellContextMenuService.SetContextMenuEnabled(settings.EnableShellContextMenu);
+                }
+                catch { }
             }
             catch { }
         }

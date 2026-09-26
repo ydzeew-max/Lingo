@@ -12,7 +12,6 @@ namespace Lingo.Services
         private static readonly Dictionary<string, Dictionary<string, string>> CachedDictionaries = new(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<string, Dictionary<(char, int), List<string>>> CachedBuckets = new(StringComparer.OrdinalIgnoreCase);
         private static readonly object LockObj = new();
-        private static bool _isInitialized = false;
 
         // Keyboard layout mappings for QWERTY <-> ЙЦУКЕН (Russian/Ukrainian/English typos)
         private static readonly Dictionary<char, char> EnToRuLayout = new();
@@ -32,18 +31,7 @@ namespace Lingo.Services
 
         public OfflineDictionaryService()
         {
-            EnsureInitialized();
-        }
-
-        private void EnsureInitialized()
-        {
-            if (_isInitialized) return;
-            lock (LockObj)
-            {
-                if (_isInitialized) return;
-                LoadAllLocalDictionaries();
-                _isInitialized = true;
-            }
+            // Pure lazy loading: individual dictionaries are loaded on-demand
         }
 
         private static List<string> GetDictionaryDirectories()
@@ -68,78 +56,46 @@ namespace Lingo.Services
             return list;
         }
 
-        private void LoadAllLocalDictionaries()
-        {
-            // 1. Embedded dictionaries inside the single-file executable
-            LoadEmbeddedDictionaries();
-
-            // 2. External dictionaries from disk (if present)
-            foreach (var dir in GetDictionaryDirectories())
-            {
-                try
-                {
-                    if (!Directory.Exists(dir)) continue;
-
-                    foreach (var file in Directory.GetFiles(dir, "*.json"))
-                    {
-                        string fileName = Path.GetFileNameWithoutExtension(file);
-                        if (fileName.Equals("words_raw", StringComparison.OrdinalIgnoreCase) ||
-                            fileName.Equals("words", StringComparison.OrdinalIgnoreCase) ||
-                            fileName.Equals("appsettings", StringComparison.OrdinalIgnoreCase))
-                            continue;
-
-                        LoadSingleDictionaryFile(file, fileName);
-                    }
-                }
-                catch { }
-            }
-        }
-
-        private static void LoadEmbeddedDictionaries()
+        private static void LoadSingleEmbeddedDictionary(string pairKey)
         {
             try
             {
                 var asm = typeof(OfflineDictionaryService).Assembly;
+                string targetSuffix = $".Dictionaries.{pairKey}.json";
+                string? matchedName = null;
+
                 foreach (var resourceName in asm.GetManifestResourceNames())
                 {
-                    if (resourceName.EndsWith(".json", StringComparison.OrdinalIgnoreCase) &&
-                        resourceName.Contains("Dictionaries."))
+                    if (resourceName.EndsWith(targetSuffix, StringComparison.OrdinalIgnoreCase) ||
+                        resourceName.Equals($"Dictionaries.{pairKey}.json", StringComparison.OrdinalIgnoreCase))
                     {
-                        int dictIdx = resourceName.IndexOf("Dictionaries.");
-                        string pairWithExt = resourceName.Substring(dictIdx + "Dictionaries.".Length);
-                        string pairKey = Path.GetFileNameWithoutExtension(pairWithExt);
+                        matchedName = resourceName;
+                        break;
+                    }
+                }
 
-                        if (pairKey.Equals("words_raw", StringComparison.OrdinalIgnoreCase) ||
-                            pairKey.Equals("words", StringComparison.OrdinalIgnoreCase) ||
-                            pairKey.Equals("appsettings", StringComparison.OrdinalIgnoreCase))
-                            continue;
-
-                        using var stream = asm.GetManifestResourceStream(resourceName);
-                        if (stream != null)
+                if (matchedName != null)
+                {
+                    using var stream = asm.GetManifestResourceStream(matchedName);
+                    if (stream != null)
+                    {
+                        using var reader = new StreamReader(stream, Encoding.UTF8);
+                        string json = reader.ReadToEnd();
+                        var loaded = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                        if (loaded != null)
                         {
-                            using var reader = new StreamReader(stream, Encoding.UTF8);
-                            string json = reader.ReadToEnd();
-                            var loaded = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
-                            if (loaded != null)
+                            var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                            foreach (var kvp in loaded)
                             {
-                                if (!CachedDictionaries.TryGetValue(pairKey, out var existing))
+                                string k = kvp.Key.Trim();
+                                string v = kvp.Value.Trim();
+                                if (!string.IsNullOrEmpty(k) && !string.IsNullOrEmpty(v))
                                 {
-                                    existing = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                                    CachedDictionaries[pairKey] = existing;
+                                    dict[k] = v;
                                 }
-
-                                foreach (var kvp in loaded)
-                                {
-                                    string k = kvp.Key.Trim();
-                                    string v = kvp.Value.Trim();
-                                    if (!string.IsNullOrEmpty(k) && !string.IsNullOrEmpty(v))
-                                    {
-                                        existing[k] = v;
-                                    }
-                                }
-
-                                BuildBucketsForDict(pairKey, existing);
                             }
+                            CachedDictionaries[pairKey] = dict;
+                            BuildBucketsForDict(pairKey, dict);
                         }
                     }
                 }
@@ -205,7 +161,6 @@ namespace Lingo.Services
             if (string.IsNullOrWhiteSpace(text))
                 return string.Empty;
 
-            EnsureInitialized();
 
             srcCode = NormalizeCode(srcCode);
             tgtCode = NormalizeCode(tgtCode);
@@ -635,7 +590,7 @@ namespace Lingo.Services
 
         private Dictionary<string, string> GetOrLoadDictionary(string src, string tgt)
         {
-            string pairKey = $"{src}_{tgt}";
+            string pairKey = $"{src}_{tgt}".ToLowerInvariant();
             if (CachedDictionaries.TryGetValue(pairKey, out var cached))
                 return cached;
 
@@ -644,6 +599,12 @@ namespace Lingo.Services
                 if (CachedDictionaries.TryGetValue(pairKey, out var again))
                     return again;
 
+                // 1. Lazy load from embedded resources on-demand
+                LoadSingleEmbeddedDictionary(pairKey);
+                if (CachedDictionaries.TryGetValue(pairKey, out var embeddedLoaded))
+                    return embeddedLoaded;
+
+                // 2. Check external dictionary folders
                 foreach (var dir in GetDictionaryDirectories())
                 {
                     string targetFile = Path.Combine(dir, $"{pairKey}.json");

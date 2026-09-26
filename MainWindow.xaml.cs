@@ -539,7 +539,7 @@ namespace Lingo
             catch { }
         }
 
-        private void OpenImageTranslateWindow(System.Drawing.Bitmap bitmap)
+        public static void OpenImageTranslateWindow(System.Drawing.Bitmap bitmap)
         {
             try
             {
@@ -549,11 +549,13 @@ namespace Lingo
                     try { win.Close(); } catch { }
                 }
 
+                var mainWindow = System.Windows.Application.Current.MainWindow;
                 var imgWin = new ImageTranslateWindow(bitmap)
                 {
-                    Owner = this
+                    Owner = mainWindow != null && mainWindow.IsVisible ? mainWindow : null
                 };
                 imgWin.Show();
+                imgWin.Activate();
             }
             catch (Exception ex)
             {

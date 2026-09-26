@@ -940,14 +940,176 @@ namespace Lingo
                     try
                     {
                         WpfClipboard.SetText(full);
-                        AnimateCheckmark(CopyAllIcon, CopyAllScale);
+                        AnimateCheckmark(CopyAllIcon, CopyAllScale, PackIconKind.ContentCopy);
                     }
                     catch { }
                 }
             }
         }
 
-        private void AnimateCheckmark(PackIcon icon, ScaleTransform scale)
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+        private static extern bool DeleteObject(IntPtr hObject);
+
+        private RenderTargetBitmap? GenerateTranslatedBitmap()
+        {
+            if (_currentBitmap == null) return null;
+
+            int origW = _currentBitmap.Width;
+            int origH = _currentBitmap.Height;
+
+            if (origW < 1 || origH < 1) return null;
+
+            try
+            {
+                IntPtr hBitmap = _currentBitmap.GetHbitmap();
+                BitmapSource bmpSource;
+                try
+                {
+                    bmpSource = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                        hBitmap,
+                        IntPtr.Zero,
+                        Int32Rect.Empty,
+                        BitmapSizeOptions.FromEmptyOptions());
+                }
+                finally
+                {
+                    DeleteObject(hBitmap);
+                }
+
+                var drawingVisual = new DrawingVisual();
+                using (var dc = drawingVisual.RenderOpen())
+                {
+                    // 1. Draw base image
+                    dc.DrawImage(bmpSource, new Rect(0, 0, origW, origH));
+
+                    // 2. Draw translated overlay blocks
+                    if (_visualResult?.Blocks != null && _isTranslatedMode)
+                    {
+                        var typeface = new Typeface(new System.Windows.Media.FontFamily("Segoe UI Variable Text, Segoe UI, sans-serif"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+                        double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+
+                        foreach (var block in _visualResult.Blocks)
+                        {
+                            if (string.IsNullOrWhiteSpace(block.TranslatedText)) continue;
+
+                            double origX = Math.Max(0.0, Math.Min(origW - 10.0, block.X));
+                            double origY = Math.Max(0.0, Math.Min(origH - 10.0, block.Y));
+                            double blockW = Math.Max(10.0, Math.Min(origW - origX, block.Width));
+                            double blockH = Math.Max(10.0, Math.Min(origH - origY, block.Height));
+
+                            var bgBrush = CreateReconstructedBackgroundBrush(
+                                _currentBitmap,
+                                (int)origX, (int)origY, (int)blockW, (int)blockH,
+                                block.BackgroundColor,
+                                out WpfColor smartTextColor);
+
+                            // Draw reconstructed background patch
+                            dc.DrawRectangle(bgBrush, null, new Rect(origX, origY, blockW, blockH));
+
+                            // Dynamic font calculation matching on-screen appearance
+                            double targetFontSize = Math.Max(9.5, Math.Min(24.0, blockH * 0.76));
+                            if (block.TranslatedText.Length > block.OriginalText.Length)
+                            {
+                                double exp = (double)block.TranslatedText.Length / Math.Max(1, block.OriginalText.Length);
+                                targetFontSize = Math.Max(9.0, targetFontSize / Math.Sqrt(exp));
+                            }
+
+                            var formattedText = new FormattedText(
+                                block.TranslatedText,
+                                System.Globalization.CultureInfo.CurrentCulture,
+                                System.Windows.FlowDirection.LeftToRight,
+                                typeface,
+                                targetFontSize,
+                                new SolidColorBrush(smartTextColor),
+                                pixelsPerDip);
+
+                            // Fit within block bounds
+                            if (formattedText.Width > blockW)
+                            {
+                                double fontScale = blockW / Math.Max(1.0, formattedText.Width);
+                                targetFontSize = Math.Max(7.0, targetFontSize * fontScale);
+                                formattedText = new FormattedText(
+                                    block.TranslatedText,
+                                    System.Globalization.CultureInfo.CurrentCulture,
+                                    System.Windows.FlowDirection.LeftToRight,
+                                    typeface,
+                                    targetFontSize,
+                                    new SolidColorBrush(smartTextColor),
+                                    pixelsPerDip);
+                            }
+
+                            double textY = origY + Math.Max(0, (blockH - formattedText.Height) / 2.0);
+                            dc.DrawText(formattedText, new WpfPoint(origX + 1.0, textY));
+                        }
+                    }
+                }
+
+                var rtb = new RenderTargetBitmap(origW, origH, 96, 96, PixelFormats.Pbgra32);
+                rtb.Render(drawingVisual);
+                rtb.Freeze();
+                return rtb;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error generating translated bitmap: {ex.Message}");
+                return null;
+            }
+        }
+
+        private void CopyImage_Click(object sender, RoutedEventArgs e)
+        {
+            var rtb = GenerateTranslatedBitmap();
+            if (rtb == null) return;
+
+            try
+            {
+                WpfClipboard.SetImage(rtb);
+                AnimateCheckmark(CopyImageIcon, CopyImageScale, PackIconKind.ImageOutline);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to copy image: {ex.Message}");
+            }
+        }
+
+        private void SaveImage_Click(object sender, RoutedEventArgs e)
+        {
+            var rtb = GenerateTranslatedBitmap();
+            if (rtb == null) return;
+
+            try
+            {
+                var sfd = new Microsoft.Win32.SaveFileDialog
+                {
+                    Title = "Сохранить изображение с переводом",
+                    FileName = $"Lingo_Translated_{DateTime.Now:yyyyMMdd_HHmmss}.png",
+                    Filter = "PNG Image (*.png)|*.png|JPEG Image (*.jpg)|*.jpg|Bitmap Image (*.bmp)|*.bmp"
+                };
+
+                if (sfd.ShowDialog(this) == true)
+                {
+                    string ext = Path.GetExtension(sfd.FileName).ToLowerInvariant();
+                    BitmapEncoder encoder = ext switch
+                    {
+                        ".jpg" or ".jpeg" => new JpegBitmapEncoder { QualityLevel = 95 },
+                        ".bmp" => new BmpBitmapEncoder(),
+                        _ => new PngBitmapEncoder()
+                    };
+
+                    encoder.Frames.Add(BitmapFrame.Create(rtb));
+                    using var fs = new FileStream(sfd.FileName, FileMode.Create, FileAccess.Write);
+                    encoder.Save(fs);
+
+                    AnimateCheckmark(SaveImageIcon, SaveImageScale, PackIconKind.Download);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to save image: {ex.Message}");
+            }
+        }
+
+        private void AnimateCheckmark(PackIcon icon, ScaleTransform scale, PackIconKind originalKind = PackIconKind.ContentCopy)
         {
             icon.Kind = PackIconKind.Check;
             icon.Foreground = new SolidColorBrush(WpfColor.FromRgb(52, 211, 153)); // Emerald green
@@ -968,7 +1130,7 @@ namespace Lingo
                 timer.Stop();
                 var fadeBack = new DoubleAnimation(0.2, 1.0, TimeSpan.FromMilliseconds(160));
                 icon.BeginAnimation(OpacityProperty, fadeBack);
-                icon.Kind = PackIconKind.ContentCopy;
+                icon.Kind = originalKind;
                 icon.Foreground = (System.Windows.Media.Brush)FindResource("TextPrimary");
             };
             timer.Start();

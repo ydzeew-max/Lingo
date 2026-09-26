@@ -12,5 +12,6 @@ namespace Lingo.Models
         public bool StartWithWindows { get; set; } = false;
         public bool MinimizeToTrayOnClose { get; set; } = false;
         public bool AlwaysOnTop { get; set; } = true;
+        public bool EnableShellContextMenu { get; set; } = true;
     }
 }

@@ -72,6 +72,9 @@ namespace Lingo
 
             // Always on top setting
             AlwaysOnTopCheck.IsChecked = s.AlwaysOnTop;
+
+            // Explorer context menu setting
+            ExplorerContextMenuCheck.IsChecked = ShellContextMenuService.IsContextMenuRegistered() || s.EnableShellContextMenu;
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
@@ -93,8 +96,14 @@ namespace Lingo
             s.MinimizeToTrayOnClose = MinimizeToTrayCheck.IsChecked ?? false;
             s.AlwaysOnTop = AlwaysOnTopCheck.IsChecked ?? true;
 
+            bool enableShellMenu = ExplorerContextMenuCheck.IsChecked ?? true;
+            s.EnableShellContextMenu = enableShellMenu;
+
             // Apply real Windows Registry autostart
             StartupService.SetStartup(startWithWin);
+
+            // Apply real Windows Registry Explorer context menu
+            ShellContextMenuService.SetContextMenuEnabled(enableShellMenu);
 
             App.Settings.Save(s);
 
