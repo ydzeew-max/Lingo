@@ -182,8 +182,9 @@ namespace Lingo
             {
                 var handle = new WindowInteropHelper(this).Handle;
                 _hotkeyService = new HotkeyService();
-                _hotkeyService.Register(handle, HotkeyService.MOD_CONTROL | HotkeyService.MOD_ALT, 0x54); // Ctrl+Alt+T
+                _hotkeyService.Register(handle, HotkeyService.MOD_CONTROL | HotkeyService.MOD_ALT, 0x54); // Ctrl+Alt+T and Ctrl+Alt+S
                 _hotkeyService.HotkeyPressed += HotkeyService_HotkeyPressed;
+                _hotkeyService.SnipHotkeyPressed += HotkeyService_SnipHotkeyPressed;
             }
             catch { }
         }
@@ -236,6 +237,41 @@ namespace Lingo
         private void HotkeyService_HotkeyPressed(object? sender, EventArgs e)
         {
             ToggleVisibility();
+        }
+
+        private async void HotkeyService_SnipHotkeyPressed(object? sender, EventArgs e)
+        {
+            await TriggerScreenSnipAsync();
+        }
+
+        public async Task TriggerScreenSnipAsync()
+        {
+            try
+            {
+                bool wasVisible = IsVisible && WindowState != WindowState.Minimized;
+                if (wasVisible)
+                {
+                    Hide();
+                    await Task.Delay(140);
+                }
+
+                var snipWindow = new SnippingWindow();
+                bool? result = snipWindow.ShowDialog();
+
+                if (result == true && snipWindow.CapturedBitmap != null)
+                {
+                    using var captured = snipWindow.CapturedBitmap;
+                    OpenImageTranslateWindow(captured);
+                }
+                else if (wasVisible)
+                {
+                    ShowAndActivate();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Snip hotkey error: {ex.Message}");
+            }
         }
 
         public void ToggleVisibility()
@@ -441,28 +477,7 @@ namespace Lingo
 
         private async void PhotoSnip_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                Hide();
-                await Task.Delay(150);
-
-                var snipWindow = new SnippingWindow();
-                bool? result = snipWindow.ShowDialog();
-
-                ShowAndActivate();
-
-                if (result == true && snipWindow.CapturedBitmap != null)
-                {
-                    using var captured = snipWindow.CapturedBitmap;
-                    OpenImageTranslateWindow(captured);
-                    await ProcessBitmapForOcrAsync(captured);
-                }
-            }
-            catch (Exception ex)
-            {
-                ShowAndActivate();
-                System.Diagnostics.Debug.WriteLine($"Snip error: {ex.Message}");
-            }
+            await TriggerScreenSnipAsync();
         }
 
         private async void PasteImage_Click(object sender, RoutedEventArgs e)
@@ -470,22 +485,27 @@ namespace Lingo
             await ProcessClipboardImageAsync();
         }
 
-        private async void OpenFile_Click(object sender, RoutedEventArgs e)
+        private void OpenFile_Click(object sender, RoutedEventArgs e)
         {
             try
             {
                 var dialog = new Microsoft.Win32.OpenFileDialog
                 {
                     Title = "Выберите изображение с текстом",
-                    Filter = "Изображения (*.png;*.jpg;*.jpeg;*.bmp;*.webp)|*.png;*.jpg;*.jpeg;*.bmp;*.webp|Все файлы (*.*)|*.*"
+                    Filter = "Изображения (*.png;*.jpg;*.jpeg;*.bmp;*.webp;*.tiff)|*.png;*.jpg;*.jpeg;*.bmp;*.webp;*.tiff|Все файлы (*.*)|*.*"
                 };
 
                 if (dialog.ShowDialog(this) == true)
                 {
-                    await ProcessFileForOcrAsync(dialog.FileName);
+                    using var fs = new System.IO.FileStream(dialog.FileName, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite);
+                    using var bmp = new System.Drawing.Bitmap(fs);
+                    OpenImageTranslateWindow(bmp);
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Open file error: {ex.Message}");
+            }
         }
 
         private void Card_DragOver(object sender, WpfDragEventArgs e)
@@ -497,7 +517,7 @@ namespace Lingo
             }
         }
 
-        private async void Card_Drop(object sender, WpfDragEventArgs e)
+        private void Card_Drop(object sender, WpfDragEventArgs e)
         {
             try
             {
@@ -510,7 +530,9 @@ namespace Lingo
                         string ext = System.IO.Path.GetExtension(file).ToLowerInvariant();
                         if (ext is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".webp" or ".tiff")
                         {
-                            await ProcessFileForOcrAsync(file);
+                            using var fs = new System.IO.FileStream(file, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite);
+                            using var bmp = new System.Drawing.Bitmap(fs);
+                            OpenImageTranslateWindow(bmp);
                         }
                     }
                 }

@@ -28,6 +28,10 @@ using WpfColor = System.Windows.Media.Color;
 using WpfMouseEventArgs = System.Windows.Input.MouseEventArgs;
 using WpfMouseButtonEventArgs = System.Windows.Input.MouseButtonEventArgs;
 using WpfMouseWheelEventArgs = System.Windows.Input.MouseWheelEventArgs;
+using WpfKeyEventArgs = System.Windows.Input.KeyEventArgs;
+using WpfDragEventArgs = System.Windows.DragEventArgs;
+using WpfDataFormats = System.Windows.DataFormats;
+using WpfDragDropEffects = System.Windows.DragDropEffects;
 
 namespace Lingo
 {
@@ -97,6 +101,90 @@ namespace Lingo
 
             Loaded += Window_Loaded;
             Closed += Window_Closed;
+            KeyDown += ImageTranslateWindow_KeyDown;
+            PreviewDragOver += ImageTranslateWindow_PreviewDragOver;
+            PreviewDrop += ImageTranslateWindow_PreviewDrop;
+        }
+
+        private void ImageTranslateWindow_KeyDown(object sender, WpfKeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                Close();
+                e.Handled = true;
+                return;
+            }
+
+            bool isCtrl = (Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control;
+            bool isAlt = (Keyboard.Modifiers & ModifierKeys.Alt) == ModifierKeys.Alt;
+
+            // Ctrl + S -> Save image to disk
+            if (isCtrl && !isAlt && e.Key == Key.S)
+            {
+                SaveImage_Click(sender, e);
+                e.Handled = true;
+                return;
+            }
+
+            // Ctrl + C -> Copy image to clipboard
+            if (isCtrl && !isAlt && e.Key == Key.C)
+            {
+                CopyImage_Click(sender, e);
+                e.Handled = true;
+                return;
+            }
+
+            // Ctrl + Alt + S -> Take new screen snip
+            if (isCtrl && isAlt && e.Key == Key.S)
+            {
+                NewSnip_Click(sender, e);
+                e.Handled = true;
+                return;
+            }
+        }
+
+        private void ImageTranslateWindow_PreviewDragOver(object sender, WpfDragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(WpfDataFormats.FileDrop))
+            {
+                e.Effects = WpfDragDropEffects.Copy;
+                e.Handled = true;
+            }
+        }
+
+        private void ImageTranslateWindow_PreviewDrop(object sender, WpfDragEventArgs e)
+        {
+            try
+            {
+                if (e.Data.GetDataPresent(WpfDataFormats.FileDrop))
+                {
+                    string[]? files = e.Data.GetData(WpfDataFormats.FileDrop) as string[];
+                    if (files != null && files.Length > 0)
+                    {
+                        string file = files[0];
+                        string ext = Path.GetExtension(file).ToLowerInvariant();
+                        if (ext is ".png" or ".jpg" or ".jpeg" or ".bmp" or ".webp" or ".tiff")
+                        {
+                            using var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                            using var loadedBmp = new Bitmap(fs);
+
+                            _tts.Stop();
+                            _cts?.Cancel();
+
+                            _currentBitmap.Dispose();
+                            _currentBitmap = (Bitmap)loadedBmp.Clone();
+
+                            DisplayImage(_currentBitmap);
+                            StartRecognitionAndTranslation();
+                            e.Handled = true;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Drop image error: {ex.Message}");
+            }
         }
 
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)

@@ -226,11 +226,11 @@
                                         Style="{StaticResource TitleBarButtonStyle}"
                                         Width="26" Height="26"
                                         Click="PhotoSnip_Click" 
-                                        ToolTip="Перевести с фото / Снимок экрана (ПКМ — меню)">
+                                        ToolTip="Перевести с фото / Снимок экрана [Ctrl + Alt + S] (ПКМ — меню)">
                                     <materialDesign:PackIcon Kind="CameraOutline" Width="16" Height="16" Foreground="{Binding RelativeSource={RelativeSource AncestorType=Button}, Path=Foreground}" VerticalAlignment="Center"/>
                                     <Button.ContextMenu>
                                         <ContextMenu Background="#FA262626" BorderBrush="#25FFFFFF" BorderThickness="1">
-                                            <MenuItem Header="Сделать снимок экрана" Click="PhotoSnip_Click">
+                                            <MenuItem Header="Сделать снимок экрана (Ctrl + Alt + S)" Click="PhotoSnip_Click">
                                                 <MenuItem.Icon>
                                                     <materialDesign:PackIcon Kind="CameraOutline" Width="16" Height="16" Foreground="{StaticResource TextPrimary}" />
                                                 </MenuItem.Icon>

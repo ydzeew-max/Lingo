@@ -7,7 +7,8 @@ namespace Lingo.Services
     public class HotkeyService : IDisposable
     {
         private const int WM_HOTKEY = 0x0312;
-        private const int HOTKEY_ID = 9000;
+        public const int HOTKEY_ID_TEXT = 9000;
+        public const int HOTKEY_ID_SNIP = 9001;
 
         [DllImport("user32.dll")]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
@@ -22,6 +23,7 @@ namespace Lingo.Services
         private IntPtr _windowHandle;
         private HwndSource? _source;
         public event EventHandler? HotkeyPressed;
+        public event EventHandler? SnipHotkeyPressed;
 
         public void Register(IntPtr windowHandle, uint modifiers = MOD_CONTROL | MOD_ALT, uint key = 0x54) // 0x54 = 'T'
         {
@@ -29,16 +31,30 @@ namespace Lingo.Services
             _source = HwndSource.FromHwnd(_windowHandle);
             _source?.AddHook(HwndHook);
 
-            UnregisterHotKey(_windowHandle, HOTKEY_ID);
-            RegisterHotKey(_windowHandle, HOTKEY_ID, modifiers, key);
+            // Register Text Translation hotkey (default Ctrl + Alt + T)
+            UnregisterHotKey(_windowHandle, HOTKEY_ID_TEXT);
+            RegisterHotKey(_windowHandle, HOTKEY_ID_TEXT, modifiers, key);
+
+            // Register Screen Snip hotkey (Ctrl + Alt + S, 0x53 = 'S')
+            UnregisterHotKey(_windowHandle, HOTKEY_ID_SNIP);
+            RegisterHotKey(_windowHandle, HOTKEY_ID_SNIP, MOD_CONTROL | MOD_ALT, 0x53);
         }
 
         private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
-            if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
+            if (msg == WM_HOTKEY)
             {
-                HotkeyPressed?.Invoke(this, EventArgs.Empty);
-                handled = true;
+                int id = wParam.ToInt32();
+                if (id == HOTKEY_ID_TEXT)
+                {
+                    HotkeyPressed?.Invoke(this, EventArgs.Empty);
+                    handled = true;
+                }
+                else if (id == HOTKEY_ID_SNIP)
+                {
+                    SnipHotkeyPressed?.Invoke(this, EventArgs.Empty);
+                    handled = true;
+                }
             }
             return IntPtr.Zero;
         }
@@ -47,8 +63,10 @@ namespace Lingo.Services
         {
             if (_windowHandle != IntPtr.Zero)
             {
-                UnregisterHotKey(_windowHandle, HOTKEY_ID);
+                UnregisterHotKey(_windowHandle, HOTKEY_ID_TEXT);
+                UnregisterHotKey(_windowHandle, HOTKEY_ID_SNIP);
                 _source?.RemoveHook(HwndHook);
+                _windowHandle = IntPtr.Zero;
             }
         }
     }

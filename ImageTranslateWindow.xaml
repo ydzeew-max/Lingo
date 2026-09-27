@@ -10,6 +10,7 @@
         Background="Transparent"
         WindowStartupLocation="CenterScreen"
         Topmost="False"
+        AllowDrop="True"
         Icon="icon.ico">
 
     <WindowChrome.WindowChrome>
@@ -96,7 +97,7 @@
                                 BorderThickness="1" 
                                 Cursor="Hand" 
                                 Click="SaveImage_Click" 
-                                ToolTip="Сохранить фото в файл... (открыть Проводник Windows)">
+                                ToolTip="Сохранить фото в файл... (Ctrl + S)">
                             <Button.Template>
                                 <ControlTemplate TargetType="Button">
                                     <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="14" Padding="{TemplateBinding Padding}">
@@ -434,9 +435,9 @@
                                 <!-- Quick Action: Copy Translated Image with animated checkmark -->
                                 <Button Style="{StaticResource TitleBarButtonStyle}" 
                                         Width="32" Height="30" 
-                                        Margin="0,0,4,0"
+                                        Margin="0,0,4,0" 
                                         Click="CopyImage_Click" 
-                                        ToolTip="Скопировать изображение с переводом в буфер обмена">
+                                        ToolTip="Скопировать изображение с переводом в буфер обмена (Ctrl + C)">
                                     <materialDesign:PackIcon x:Name="CopyImageIcon" Kind="ImageOutline" Width="16" Height="16" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
                                         <materialDesign:PackIcon.RenderTransform>
                                             <ScaleTransform x:Name="CopyImageScale" ScaleX="1.0" ScaleY="1.0" />
@@ -447,9 +448,9 @@
                                 <!-- Quick Action: Save Translated Image to Disk (Opens File Explorer) -->
                                 <Button Style="{StaticResource TitleBarButtonStyle}" 
                                         Width="32" Height="30" 
-                                        Margin="0,0,4,0"
+                                        Margin="0,0,4,0" 
                                         Click="SaveImage_Click" 
-                                        ToolTip="Сохранить фото в файл... (открыть Проводник Windows)">
+                                        ToolTip="Сохранить фото в файл... (Ctrl + S)">
                                     <materialDesign:PackIcon x:Name="SaveImageIcon" Kind="ContentSaveOutline" Width="16" Height="16" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
                                         <materialDesign:PackIcon.RenderTransform>
                                             <ScaleTransform x:Name="SaveImageScale" ScaleX="1.0" ScaleY="1.0" />
@@ -461,7 +462,7 @@
                                 <Button Style="{StaticResource TitleBarButtonStyle}" 
                                         Width="32" Height="30" 
                                         Click="NewSnip_Click" 
-                                        ToolTip="Сделать новый снимок экрана">
+                                        ToolTip="Сделать новый снимок экрана (Ctrl + Alt + S)">
                                     <materialDesign:PackIcon Kind="CameraOutline" Width="16" Height="16" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
                                 </Button>
                             </StackPanel>

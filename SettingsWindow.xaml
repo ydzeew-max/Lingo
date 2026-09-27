@@ -101,32 +101,64 @@
 
                         <!-- Card 2: Hotkey Display -->
                         <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,10">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                
-                                <StackPanel VerticalAlignment="Center">
-                                    <TextBlock Text="Горячая клавиша" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" FontSize="13"/>
-                                    <TextBlock Text="Быстрый вызов окна Lingo" Foreground="{StaticResource TextSecondary}" FontSize="11.5" Margin="0,2,0,0"/>
-                                </StackPanel>
+                            <StackPanel>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Быстрый вызов Lingo" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" FontSize="13"/>
+                                        <TextBlock Text="Открыть / скрыть окно переводчика" Foreground="{StaticResource TextSecondary}" FontSize="11.5" Margin="0,2,0,0"/>
+                                    </StackPanel>
 
-                                <!-- Keycap Styled Badge -->
-                                <Border Grid.Column="1" 
-                                        Background="#18FFFFFF" 
-                                        BorderBrush="#25FFFFFF" 
-                                        BorderThickness="1" 
-                                        CornerRadius="5" 
-                                        Padding="9,3"
-                                        VerticalAlignment="Center">
-                                    <TextBlock x:Name="HotkeyText" 
-                                               Text="Ctrl + Alt + T" 
-                                               Foreground="{StaticResource TextPrimary}" 
-                                               FontWeight="SemiBold" 
-                                               FontSize="12"/>
-                                </Border>
-                            </Grid>
+                                    <!-- Keycap Styled Badge -->
+                                    <Border Grid.Column="1" 
+                                            Background="#18FFFFFF" 
+                                            BorderBrush="#25FFFFFF" 
+                                            BorderThickness="1" 
+                                            CornerRadius="5" 
+                                            Padding="9,3" 
+                                            VerticalAlignment="Center">
+                                        <TextBlock x:Name="HotkeyText" 
+                                                   Text="Ctrl + Alt + T" 
+                                                   Foreground="{StaticResource TextPrimary}" 
+                                                   FontWeight="SemiBold" 
+                                                   FontSize="12"/>
+                                    </Border>
+                                </Grid>
+
+                                <!-- Divider -->
+                                <Border Height="1" Background="{StaticResource CardBorder}" Margin="0,10,0,10" />
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="Снимок экрана и перевод" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold" FontSize="13"/>
+                                        <TextBlock Text="Выделить область экрана для перевода" Foreground="{StaticResource TextSecondary}" FontSize="11.5" Margin="0,2,0,0"/>
+                                    </StackPanel>
+
+                                    <!-- Keycap Styled Badge -->
+                                    <Border Grid.Column="1" 
+                                            Background="#18FFFFFF" 
+                                            BorderBrush="#25FFFFFF" 
+                                            BorderThickness="1" 
+                                            CornerRadius="5" 
+                                            Padding="9,3" 
+                                            VerticalAlignment="Center">
+                                        <TextBlock x:Name="SnipHotkeyText" 
+                                                   Text="Ctrl + Alt + S" 
+                                                   Foreground="{StaticResource TextPrimary}" 
+                                                   FontWeight="SemiBold" 
+                                                   FontSize="12"/>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
                         </Border>
 
                         <!-- Card 3: Automation & System Tray Settings -->
