@@ -54,12 +54,42 @@ namespace Lingo
             }
         }
 
+        private void CancelSnip()
+        {
+            if (_isDragging)
+            {
+                _isDragging = false;
+                ReleaseMouseCapture();
+                SelectionBorder.Visibility = Visibility.Collapsed;
+            }
+            DialogResult = false;
+            Close();
+        }
+
+        private void Window_PreviewKeyDown(object sender, WpfKeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                CancelSnip();
+                e.Handled = true;
+            }
+        }
+
+        private void Window_PreviewMouseDown(object sender, WpfMouseButtonEventArgs e)
+        {
+            if (e.RightButton == MouseButtonState.Pressed)
+            {
+                CancelSnip();
+                e.Handled = true;
+            }
+        }
+
         private void Window_KeyDown(object sender, WpfKeyEventArgs e)
         {
             if (e.Key == Key.Escape)
             {
-                DialogResult = false;
-                Close();
+                CancelSnip();
+                e.Handled = true;
             }
         }
 

@@ -508,7 +508,7 @@ namespace Lingo
             }
         }
 
-        private void Card_DragOver(object sender, WpfDragEventArgs e)
+        private void Window_PreviewDragOver(object sender, WpfDragEventArgs e)
         {
             if (e.Data.GetDataPresent(WpfDataFormats.FileDrop))
             {
@@ -517,7 +517,7 @@ namespace Lingo
             }
         }
 
-        private void Card_Drop(object sender, WpfDragEventArgs e)
+        private void Window_PreviewDrop(object sender, WpfDragEventArgs e)
         {
             try
             {
@@ -533,11 +533,15 @@ namespace Lingo
                             using var fs = new System.IO.FileStream(file, System.IO.FileMode.Open, System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite);
                             using var bmp = new System.Drawing.Bitmap(fs);
                             OpenImageTranslateWindow(bmp);
+                            e.Handled = true;
                         }
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Window drop error: {ex.Message}");
+            }
         }
 
         private async void InputTextBox_PreviewKeyDown(object sender, WpfKeyEventArgs e)

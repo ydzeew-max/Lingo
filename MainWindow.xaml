@@ -10,6 +10,9 @@
         Background="Transparent"
         WindowStartupLocation="CenterScreen"
         Topmost="True"
+        AllowDrop="True"
+        PreviewDragOver="Window_PreviewDragOver"
+        PreviewDrop="Window_PreviewDrop"
         Icon="icon.ico">
 
     <WindowChrome.WindowChrome>
@@ -178,10 +181,7 @@
                             BorderBrush="{StaticResource CardBorder}" 
                             BorderThickness="1" 
                             CornerRadius="8" 
-                            Padding="12"
-                            AllowDrop="True"
-                            Drop="Card_Drop"
-                            DragOver="Card_DragOver">
+                            Padding="12">
                         <Grid>
                             <TextBox x:Name="InputTextBox" 
                                      Background="Transparent" 
